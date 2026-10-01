@@ -34,7 +34,7 @@ const env = {
   NODE_ENV: (process.env.NODE_ENV || 'development').trim(),
   PORT: parseInt((process.env.PORT || '3000').trim(), 10),
   MONGO_URI,
-  FRONTEND_URL: (process.env.FRONTEND_URL || 'http://localhost:5173').trim(),
+  FRONTEND_URL: (process.env.FRONTEND_URL || 'http://localhost:5173' || 'http://localhost:5174').trim(),
   REDIS_HOST: parseRedisHost(process.env.REDIS_HOST),
   REDIS_PORT: parseRedisPort(process.env.REDIS_PORT),
   JWT_ACCESS_SECRET,

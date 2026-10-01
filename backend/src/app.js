@@ -19,7 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Apply global rate limiting to all /api routes
-app.use('/api', globalRateLimiter);
+// app.use('/api', globalRateLimiter);
 
 const authRoutes = require('./routes/user/auth/auth.routes');
 const adminAuthRoutes = require('./routes/admin/admin.auth.routes');

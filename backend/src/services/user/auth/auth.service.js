@@ -50,6 +50,40 @@ class AuthService {
         };
     }
 
+    async resendOtp(email) {
+        if (!email) {
+            const error = new Error('Email is required.');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const redisKey = `signup:${normalizedEmail}`;
+        const attemptsKey = `otp_attempts:${normalizedEmail}`;
+
+        const signupData = await redisUtil.get(redisKey);
+        if (!signupData) {
+            const error = new Error('Signup session expired. Please sign up again.');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const otp = otpUtil.generateOtp();
+        signupData.otp = otp;
+        
+        const expirationTime = 300; 
+
+        await redisUtil.setEx(redisKey, expirationTime, signupData);
+        await redisUtil.setEx(attemptsKey, expirationTime, 0);
+
+        await emailUtil.sendOtpEmail(normalizedEmail, otp);
+
+        return {
+            message: 'OTP resent successfully.',
+            expiresIn: '5 minutes'
+        };
+    }
+
     async verifyOtp({ email, otp }) {
         if (!email || !otp) {
             const error = new Error('Email and OTP are required.');
