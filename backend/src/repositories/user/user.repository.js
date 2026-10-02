@@ -13,8 +13,13 @@ class UserRepository {
         return User.findOne({ email: email.toLowerCase() });
     }
 
-    findAll(filter = {}) {
-        return User.find(filter);
+    async findAll(filter = {}, page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+        const [data, total] = await Promise.all([
+            User.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+            User.countDocuments(filter)
+        ]);
+        return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
     findByRole(role) {

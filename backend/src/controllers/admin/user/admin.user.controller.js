@@ -3,11 +3,21 @@ const adminUserService = require('../../../services/admin/user/admin.user.servic
 class AdminUserController {
     async getAllUsers(req, res) {
         try {
-            const users = await adminUserService.getAllUsers();
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const search = req.query.search || '';
+
+            const users = await adminUserService.getAllUsers(page, limit, search);
             return res.status(200).json({
                 success: true,
                 message: 'Users retrieved successfully',
-                data: users
+                data: users.data,
+                pagination: {
+                    total: users.total,
+                    page: users.page,
+                    limit: users.limit,
+                    totalPages: users.totalPages
+                }
             });
         } catch (error) {
             const statusCode = error.statusCode || 500;

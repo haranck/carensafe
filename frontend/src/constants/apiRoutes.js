@@ -13,5 +13,9 @@ export const API_ROUTES = {
         GET_ALL: "/admin/users",
         BLOCK: (userId) => `/admin/users/${userId}/block`,
         UNBLOCK: (userId) => `/admin/users/${userId}/unblock`,
+    },
+    ADMIN_PRODUCTS: {
+        GET_ALL: "/admin/products",
+        CREATE: "/admin/products",
     }
 };

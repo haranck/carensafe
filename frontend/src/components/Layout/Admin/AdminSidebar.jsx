@@ -1,10 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Package, ShoppingBag, BarChart2, Wallet, IdCard } from "lucide-react";
+import { LayoutDashboard, Users, Package, ShoppingBag, BarChart2, Wallet, IdCard, PlusCircle } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
   { label: "User Management", icon: Users, path: "/admin/users" },
   { label: "Products", icon: Package, path: "/admin/products" },
+  { label: "Add Products", icon: PlusCircle, path: "/admin/add-products" },
   { label: "Orders", icon: ShoppingBag, path: "/admin/orders" },
   { label: "Sales Reports", icon: BarChart2, path: "/admin/sales-reports" },
   { label: "Earnings", icon: Wallet, path: "/admin/earnings" },
@@ -31,8 +32,8 @@ const AdminSidebar = ({ isSidebarOpen }) => {
               key={label}
               to={path}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold no-underline transition-colors
-                ${isActive 
-                  ? 'bg-indigo-600 text-white' 
+                ${isActive
+                  ? 'bg-indigo-600 text-white'
                   : 'hover:bg-slate-800 hover:text-white'
                 }`}
             >

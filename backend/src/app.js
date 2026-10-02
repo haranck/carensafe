@@ -3,6 +3,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const env = require('./config/envValidation');
 const { globalRateLimiter } = require('./middlewares/rateLimit.middleware');
+const { globalErrorHandler } = require('./middlewares/error.middleware');
 
 const app = express();
 
@@ -24,9 +25,13 @@ app.use(cookieParser());
 const authRoutes = require('./routes/user/auth/auth.routes');
 const adminAuthRoutes = require('./routes/admin/admin.auth.routes');
 const adminUserRoutes = require('./routes/admin/admin.user.routes');
+const adminProductRoutes = require('./routes/admin/admin.product.routes');
 
 app.use('/api/user/auth', authRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/users', adminUserRoutes);
+app.use('/api/admin/products', adminProductRoutes);
+
+app.use(globalErrorHandler);
 
 module.exports = app;

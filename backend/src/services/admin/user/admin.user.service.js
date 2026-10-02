@@ -1,8 +1,16 @@
 const userRepository = require('../../../repositories/user/user.repository');
 
 class AdminUserService {
-    async getAllUsers() {
-        return await userRepository.findAll({ isAdmin: { $ne: true } });
+    async getAllUsers(page, limit, search) {
+        const filter = { isAdmin: { $ne: true } };
+        if (search) {
+            filter.$or = [
+                { firstName: { $regex: search, $options: 'i' } },
+                { lastName: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+        return await userRepository.findAll(filter, page, limit);
     }
 
     async blockUser(userId) {

@@ -42,6 +42,11 @@ const env = {
   JWT_ACCESS_EXPIRES_IN: (process.env.JWT_ACCESS_EXPIRES_IN || '15m').trim(),
   JWT_REFRESH_EXPIRES_IN: (process.env.JWT_REFRESH_EXPIRES_IN || process.env.JWT_REFRESH_EXPIRATION || '7d').trim(),
   REFRESH_TOKEN_MAX_AGE: parseInt((process.env.REFRESH_TOKEN_MAX_AGE || '604800000').trim(), 10),
+
+  // Cloudinary
+  CLOUDINARY_CLOUD_NAME: (process.env.CLOUDINARY_CLOUD_NAME || '').trim(),
+  CLOUDINARY_API_KEY: (process.env.CLOUDINARY_API_KEY || '').trim(),
+  CLOUDINARY_API_SECRET: (process.env.CLOUDINARY_API_SECRET || '').trim(),
 };
 
 module.exports = env;
