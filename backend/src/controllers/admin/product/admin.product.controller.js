@@ -85,6 +85,59 @@ class AdminProductController {
             });
         }
     }
+
+    async updateProductStatus(req, res) {
+        try {
+            const { id } = req.params;
+            const { isActive } = req.body;
+            
+            const updatedProduct = await adminProductService.updateProductStatus(id, isActive);
+            
+            return res.status(200).json({
+                success: true,
+                message: 'Product status updated successfully',
+                data: updatedProduct
+            });
+        } catch (error) {
+            const statusCode = error.statusCode || 500;
+            return res.status(statusCode).json({
+                success: false,
+                message: error.message || 'Internal Server Error'
+            });
+        }
+    }
+
+    async updateVariant(req, res) {
+        try {
+            const { id, variantId } = req.params;
+            const { name, price, stock, size, isActive, existingImages } = req.body;
+            
+            const variantImages = req.files ? req.files.filter(f => f.fieldname === 'images') : [];
+            
+            const variantData = {
+                ...(name && { name }),
+                ...(price !== undefined && { price: Number(price) }),
+                ...(stock !== undefined && { stock: Number(stock) }),
+                ...(size && { size }),
+                ...(isActive !== undefined && { isActive: isActive === 'true' || isActive === true }),
+                ...(existingImages !== undefined && { existingImages: JSON.parse(existingImages) })
+            };
+            
+            const updatedProduct = await adminProductService.updateVariant(id, variantId, variantData, variantImages);
+            
+            return res.status(200).json({
+                success: true,
+                message: 'Variant updated successfully',
+                data: updatedProduct
+            });
+        } catch (error) {
+            const statusCode = error.statusCode || 500;
+            return res.status(statusCode).json({
+                success: false,
+                message: error.message || 'Internal Server Error'
+            });
+        }
+    }
 }
 
 module.exports = new AdminProductController();

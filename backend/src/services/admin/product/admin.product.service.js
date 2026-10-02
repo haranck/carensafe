@@ -41,6 +41,56 @@ class AdminProductService {
         }
         return await productRepository.findAll(filter, page, limit);
     }
+    async updateProductStatus(productId, isActive) {
+        const product = await productRepository.updateStatus(productId, isActive);
+        if (!product) {
+            const error = new Error('Product not found');
+            error.statusCode = 404;
+            throw error;
+        }
+        return product;
+    }
+
+    async updateVariant(productId, variantId, variantData, files) {
+        const product = await productRepository.findById(productId);
+        if (!product) {
+            const error = new Error('Product not found');
+            error.statusCode = 404;
+            throw error;
+        }
+        
+        const variant = product.variants.find(v => v._id.toString() === variantId);
+        if (!variant) {
+            const error = new Error('Variant not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        let finalImages = variant.images;
+        
+        if (variantData.existingImages !== undefined) {
+            // Keep only those images that are in existingImages array
+            finalImages = variant.images.filter(img => 
+                variantData.existingImages.some(eImg => eImg.url === img.url || eImg.publicId === img.publicId)
+            );
+        }
+
+        if (files && files.length > 0) {
+            const newImages = files.map(file => ({
+                url: file.path,
+                publicId: file.filename
+            }));
+            finalImages = [...finalImages, ...newImages];
+        }
+
+        if (variantData.existingImages !== undefined || (files && files.length > 0)) {
+            variantData.images = finalImages;
+        }
+        delete variantData.existingImages;
+
+        const updatedProduct = await productRepository.updateVariant(productId, variantId, variantData);
+        return updatedProduct;
+    }
 }
 
 module.exports = new AdminProductService();

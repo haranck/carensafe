@@ -42,7 +42,7 @@ const AdminUsersPage = () => {
         <div className="relative w-[320px]">
           <input
             type="text"
-            placeholder="Search by name, email, or role..."
+            placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-800 text-[14px] placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all"

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAllUsers, blockUser, unblockUser, getAllProducts, createProduct } from "../../services/AdminService";
+import { getAllUsers, blockUser, unblockUser, getAllProducts, createProduct, updateProductStatus, updateVariant } from "../../services/AdminService";
 
 export const useGetAllUsers = (page = 1, limit = 10, search = '') => {
     return useQuery({
@@ -43,6 +43,26 @@ export const useCreateProduct = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: createProduct,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin_products"] });
+        },
+    });
+};
+
+export const useUpdateProductStatus = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, isActive }) => updateProductStatus(id, isActive),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin_products"] });
+        },
+    });
+};
+
+export const useUpdateVariant = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, variantId, formData }) => updateVariant(id, variantId, formData),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["admin_products"] });
         },

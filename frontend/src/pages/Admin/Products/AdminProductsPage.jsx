@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Package, Search, Plus, Edit, Eye, Loader2 } from 'lucide-react';
 import { useGetAllProducts } from '../../../hooks/Admin/AdminHooks';
 import Pagination from '../../../components/common/Pagination';
+import ProductModal from '../../../components/Modal/ProductModal';
 import toast from 'react-hot-toast';
 
 const AdminProductsPage = () => {
@@ -11,6 +12,14 @@ const AdminProductsPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
     const navigate = useNavigate();
+
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const openModal = (product) => {
+        setSelectedProduct(product);
+        setIsModalOpen(true);
+    };
 
     // Debounce search term
     useEffect(() => {
@@ -162,18 +171,12 @@ const AdminProductsPage = () => {
                                             <td className="py-4 px-6">
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button 
-                                                        onClick={() => toast("View Product details coming soon!")}
-                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                                                        title="View Details"
+                                                        onClick={() => openModal(product)}
+                                                        className="px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-[13px] font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                                                        title="View & Edit Details"
                                                     >
-                                                        <Eye size={18} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => toast("Edit Product coming soon!")}
-                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                                                        title="Edit Product"
-                                                    >
-                                                        <Edit size={18} />
+                                                        <Edit size={16} />
+                                                        Manage
                                                     </button>
                                                 </div>
                                             </td>
@@ -207,6 +210,15 @@ const AdminProductsPage = () => {
                     itemsPerPage={itemsPerPage}
                 />
             )}
+
+            <ProductModal 
+                isOpen={isModalOpen} 
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setSelectedProduct(null);
+                }} 
+                product={selectedProduct} 
+            />
         </div>
     );
 };
