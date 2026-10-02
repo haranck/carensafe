@@ -8,5 +8,10 @@ export const API_ROUTES = {
     },
     ADMIN_AUTH: {
         LOGIN: "/admin/auth/login",
+    },
+    ADMIN_USERS: {
+        GET_ALL: "/admin/users",
+        BLOCK: (userId) => `/admin/users/${userId}/block`,
+        UNBLOCK: (userId) => `/admin/users/${userId}/unblock`,
     }
 };

@@ -163,6 +163,12 @@ class AuthService {
             throw error;
         }
 
+        if (user.isAdmin) {
+            const error = new Error('Admins are not allowed to log in from the user portal.');
+            error.statusCode = 403;
+            throw error;
+        }
+
         if (user.isBlocked) {
             const error = new Error('Your account is blocked.');
             error.statusCode = 403;

@@ -71,11 +71,15 @@ export const Header = () => {
           {/* Nav links */}
           <nav className="hidden lg:flex items-center gap-1">
             {NAV_LINKS.map(({ label, to }) => {
-              const active = pathname === to;
+              // Make Home point to /home if authenticated to match the routes
+              const targetRoute = (label === "Home" && isAuthenticated) ? "/home" : to;
+              // Highlight Home if we are on / or /home
+              const active = pathname === targetRoute || (label === "Home" && pathname === "/");
+              
               return (
                 <Link
                   key={label}
-                  to={to}
+                  to={targetRoute}
                   className={`text-[13px] px-3 py-1.5 rounded-md no-underline transition-colors duration-150
                     ${active
                       ? "text-[#1a56db] font-semibold bg-blue-50/70"

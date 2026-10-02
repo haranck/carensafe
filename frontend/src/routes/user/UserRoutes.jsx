@@ -10,11 +10,9 @@ import HomePage from "../../pages/HomePage";
 const UserRoutes = () => {
     return (
         <Routes>
-            {/* Landing page — visible to everyone */}
-            <Route path={FRONTEND_ROUTES.LANDING} element={<LandingPage />} />
-
             {/* Public-only routes (redirect to /home if already logged in) */}
             <Route element={<PublicRoute />}>
+                <Route path={FRONTEND_ROUTES.LANDING} element={<LandingPage />} />
                 <Route path={FRONTEND_ROUTES.SIGNUP} element={<SignupPage />} />
                 <Route path={FRONTEND_ROUTES.LOGIN} element={<LoginPage />} />
             </Route>

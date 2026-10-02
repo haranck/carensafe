@@ -7,7 +7,7 @@ const { globalRateLimiter } = require('./middlewares/rateLimit.middleware');
 const app = express();
 
 const corsOptions = {
-    origin: env.FRONTEND_URL,
+    origin: [env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:5174'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -23,8 +23,10 @@ app.use(cookieParser());
 
 const authRoutes = require('./routes/user/auth/auth.routes');
 const adminAuthRoutes = require('./routes/admin/admin.auth.routes');
+const adminUserRoutes = require('./routes/admin/admin.user.routes');
 
 app.use('/api/user/auth', authRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/admin/users', adminUserRoutes);
 
 module.exports = app;

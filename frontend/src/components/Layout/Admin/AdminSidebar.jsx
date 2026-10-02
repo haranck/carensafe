@@ -1,15 +1,17 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, ShoppingCart, Activity, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Package, ShoppingBag, BarChart2, Wallet, IdCard } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
-  { label: "Users", icon: Users, path: "/admin/users" },
-  { label: "Orders", icon: ShoppingCart, path: "/admin/orders" },
-  { label: "Analytics", icon: Activity, path: "/admin/analytics" },
-  { label: "Settings", icon: Settings, path: "/admin/settings" },
+  { label: "User Management", icon: Users, path: "/admin/users" },
+  { label: "Products", icon: Package, path: "/admin/products" },
+  { label: "Orders", icon: ShoppingBag, path: "/admin/orders" },
+  { label: "Sales Reports", icon: BarChart2, path: "/admin/sales-reports" },
+  { label: "Earnings", icon: Wallet, path: "/admin/earnings" },
+  { label: "Partner Management", icon: IdCard, path: "/admin/partner-management" },
 ];
 
-const AdminSidebar = ({ isSidebarOpen, handleLogout }) => {
+const AdminSidebar = ({ isSidebarOpen }) => {
   const location = useLocation();
 
   return (
@@ -40,16 +42,6 @@ const AdminSidebar = ({ isSidebarOpen, handleLogout }) => {
           );
         })}
       </nav>
-
-      <div className="p-4 border-t border-slate-800">
-        <button 
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-rose-400 hover:bg-rose-400/10 hover:text-rose-300 transition-colors bg-transparent border-none cursor-pointer"
-        >
-          <LogOut size={16} />
-          Logout
-        </button>
-      </div>
     </aside>
   );
 };

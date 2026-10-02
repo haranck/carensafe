@@ -28,14 +28,14 @@ const Field = ({ label, icon: Icon, error, children, rightIcon }) => (
             {label}
         </label>
         <div
-            className={`flex items-center rounded-xl border bg-slate-50/80 transition-all duration-200
-        focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(214,0,138,0.12)]
+            className={`flex items-center rounded-xl border bg-slate-50/80 transition-all duration-200 group
+        focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(29,78,216,0.12)]
         ${error
                     ? "border-rose-400 focus-within:border-rose-400 focus-within:shadow-[0_0_0_3px_rgba(244,63,94,0.12)]"
-                    : "border-slate-200 focus-within:border-[#d6008a]"
+                    : "border-slate-200 focus-within:border-blue-700"
                 }`}
         >
-            <span className={`pl-4 flex-shrink-0 transition-colors duration-200 ${error ? "text-rose-400" : "text-slate-400 group-focus-within:text-[#d6008a]"}`}>
+            <span className={`pl-4 flex-shrink-0 transition-colors duration-200 ${error ? "text-rose-400" : "text-slate-400 group-focus-within:text-blue-700"}`}>
                 <Icon size={18} />
             </span>
             {children}
@@ -75,7 +75,7 @@ const AdminLoginForm = () => {
         "flex-1 bg-transparent border-none outline-none py-3.5 px-3.5 text-[14.5px] text-slate-800 placeholder:text-slate-300 placeholder:text-[13.5px]";
 
     return (
-        <div className="bg-white rounded-3xl shadow-[0_12px_40px_rgba(59,42,138,0.12),0_2px_8px_rgba(0,0,0,0.05)] p-10 w-full max-w-[460px]">
+        <div className="bg-white rounded-3xl shadow-[0_12px_40px_rgba(30,58,138,0.08),0_2px_8px_rgba(0,0,0,0.04)] p-10 w-full max-w-[460px]">
 
             {/* Logo and Admin Badge */}
             <div className="flex flex-col items-center justify-center mb-6">
@@ -87,7 +87,7 @@ const AdminLoginForm = () => {
             </div>
 
             <div className="text-center mb-8">
-                <h2 className="text-[26px] font-black text-[#1e1a3a] tracking-tight mb-2">
+                <h2 className="text-[26px] font-black text-blue-950 tracking-tight mb-2">
                     Admin Access
                 </h2>
                 <p className="text-[13.5px] text-slate-500 font-medium">
@@ -137,7 +137,7 @@ const AdminLoginForm = () => {
                 </Field>
 
                 <div className="flex justify-end -mt-3">
-                    <Link to="/forgot-password" className="text-[12px] font-semibold text-slate-500 hover:text-[#d6008a] transition-colors">
+                    <Link to="/forgot-password" className="text-[12px] font-semibold text-slate-500 hover:text-blue-700 transition-colors">
                         Forgot Password?
                     </Link>
                 </div>
@@ -147,9 +147,9 @@ const AdminLoginForm = () => {
                     type="submit"
                     disabled={isPending}
                     className="mt-2 w-full py-4 rounded-xl text-white text-[15px] font-bold tracking-wide border-none cursor-pointer
-            bg-slate-800 hover:bg-slate-900
-            shadow-[0_4px_16px_rgba(30,26,58,0.20)]
-            hover:-translate-y-px hover:shadow-[0_6px_22px_rgba(30,26,58,0.30)]
+            bg-blue-900 hover:bg-blue-950
+            shadow-[0_4px_16px_rgba(30,58,138,0.20)]
+            hover:-translate-y-px hover:shadow-[0_6px_22px_rgba(30,58,138,0.30)]
             active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed
             transition-all duration-200 flex items-center justify-center gap-2"
                 >

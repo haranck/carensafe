@@ -34,10 +34,10 @@ const HomePage = () => {
           {/* Quick actions */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
             {[
-              { icon: ShoppingBag, label: "Shop Products", to: "/shop",    color: "text-violet-500" },
-              { icon: Package,     label: "My Orders",     to: "/orders",  color: "text-blue-500"   },
-              { icon: Heart,       label: "Wishlist",       to: "/wishlist", color: "text-pink-500"   },
-              { icon: Star,        label: "Rewards",        to: "#",        color: "text-amber-500"  },
+              { icon: ShoppingBag, label: "Shop Products", to: "/shop", color: "text-violet-500" },
+              { icon: Package, label: "My Orders", to: "/orders", color: "text-blue-500" },
+              { icon: Heart, label: "Wishlist", to: "/wishlist", color: "text-pink-500" },
+              { icon: Star, label: "Rewards", to: "#", color: "text-amber-500" },
             ].map(({ icon: Icon, label, to, color }) => (
               <Link
                 key={label}
@@ -66,9 +66,9 @@ const HomePage = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {[
-                { name: "Ultra Thin Day Pad",    price: "₹199", tag: "Best Seller" },
-                { name: "XL Night Comfort Pad",  price: "₹249", tag: "Popular"     },
-                { name: "Panty Liner (Pack of 30)", price: "₹149", tag: "New"       },
+                { name: "Ultra Thin Day Pad", price: "₹199", tag: "Best Seller" },
+                { name: "XL Night Comfort Pad", price: "₹249", tag: "Popular" },
+                { name: "Panty Liner (Pack of 30)", price: "₹149", tag: "New" },
               ].map(({ name, price, tag }) => (
                 <div key={name} className="bg-white border border-slate-100 rounded-2xl overflow-hidden hover:shadow-[0_8px_24px_rgba(59,42,138,0.10)] hover:-translate-y-1 transition-all duration-200 group">
                   <div className="h-40 bg-gradient-to-br from-violet-50 to-pink-50 flex items-center justify-center relative">

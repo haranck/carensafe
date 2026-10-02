@@ -22,15 +22,15 @@ class UserRepository {
     }
 
     updateById(userId, updateData) {
-        return User.findByIdAndUpdate(userId, updateData, { new: true, runValidators: true });
+        return User.findByIdAndUpdate(userId, updateData, { returnDocument: 'after', runValidators: true });
     }
 
     updateRole(userId, role) {
-        return User.findByIdAndUpdate(userId, { role }, { new: true, runValidators: true });
+        return User.findByIdAndUpdate(userId, { role }, { returnDocument: 'after', runValidators: true });
     }
 
     updateBlockStatus(userId, isBlocked) {
-        return User.findByIdAndUpdate(userId, { isBlocked }, { new: true, runValidators: true });
+        return User.findByIdAndUpdate(userId, { isBlocked }, { returnDocument: 'after', runValidators: true });
     }
 
     deleteById(userId) {

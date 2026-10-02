@@ -24,7 +24,7 @@ const AdminDashboardLayout = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         
-        <AdminHeader isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+        <AdminHeader isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} handleLogout={handleLogout} />
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">
