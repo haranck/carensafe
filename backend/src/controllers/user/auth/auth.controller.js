@@ -42,6 +42,25 @@ class AuthController {
         }
     }
 
+    async resendOtp(req, res) {
+        try {
+            const { email } = req.body;
+            const response = await authService.resendOtp(email);
+
+            return res.status(200).json({
+                success: true,
+                message: response.message,
+                data: response
+            });
+        } catch (error) {
+            const statusCode = error.statusCode || 500;
+            return res.status(statusCode).json({
+                success: false,
+                message: error.message || 'Internal Server Error'
+            });
+        }
+    }
+
     async login(req, res) {
         try {
             const { email, password } = req.body;
