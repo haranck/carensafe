@@ -1,7 +1,7 @@
 # CLAUDE.md — Care N Safe
 
-E-commerce app for an organic sanitary-pad brand: customer storefront + admin portal (users, partners
-hierarchy AREA_MANAGER → DISTRIBUTOR → PROMOTER, products with variants). Two independent apps:
+E-commerce app for an organic sanitary-pad brand: customer storefront + admin portal (users, products
+with variants). Two independent apps:
 
 ```
 carensafe/
@@ -52,7 +52,7 @@ Mounted in `src/app.js`: `/api/user/auth`, `/api/admin/auth`, `/api/admin/users`
 **Routes**: wiring only: path, middlewares, then an arrow wrapper to the controller instance:
 ```js
 router.post('/login', validateLogin, (req, res) => authController.login(req, res));
-router.post('/partner', upload.single('avatar'), (req, res) => adminUserController.createPartner(req, res));
+router.put('/:id/variants/:variantId', upload.any(), (req, res) => adminProductController.updateVariant(req, res));
 ```
 No logic, no DB, no response building.
 
@@ -100,7 +100,7 @@ res.status(200).json({ success: true, message, data: result.data,
 res.status(statusCode).json({ success: false, message });
 ```
 201 for creates. Never send `password` or `refreshToken` in a body. Login returns
-`data: { user: { id, firstName, lastName, email, role, isAdmin }, accessToken }` plus an httpOnly
+`data: { user: { id, firstName, lastName, email, isAdmin }, accessToken }` plus an httpOnly
 `refreshToken` cookie (`sameSite: 'strict'`, `secure` in production, `maxAge: env.REFRESH_TOKEN_MAX_AGE`).
 
 ### Errors
@@ -124,10 +124,10 @@ forwards rejected promises). Same JSON shape. Keep the controller try/catch patt
 
 ### Auth
 
-- `utils/jwt.js` signs `{ userId, role }`. Access token 15m, refresh 7d. Refresh rotation and logout
+- `utils/jwt.js` signs `{ userId }` (there are no roles; admins are `isAdmin: true`). Access token 15m, refresh 7d. Refresh rotation and logout
   blacklist the old token in Redis (`blacklist:<token>`).
 - `middlewares/auth.middleware.js` (default export) expects `Authorization: Bearer <token>`, verifies it and sets
-  **`req.user = { userId, role, iat, exp }`**. 401 `{ success:false, message }` otherwise. It does **not**
+  **`req.user = { userId }`**. 401 `{ success:false, message }` otherwise. It does **not**
   check `isBlocked` or `isAdmin`. It's currently not mounted anywhere (see Known issues). Protect new user
   routes with it: `router.get('/', authMiddleware, (req, res) => ...)` and read `req.user.userId`.
 - Signup is a two-step OTP flow. Pending signup data lives in Redis `signup:<email>` (300s) with
@@ -228,7 +228,7 @@ Pattern from `components/Auth/LoginForm.jsx`:
 - Submit calls `mutate(data, { onSuccess, onError })`. Show the API error from
   `error?.response?.data?.message`. Disable the submit button and show a spinner while `isPending`.
 - Mirror the backend Joi rules exactly (password: min 8, upper, lower, digit, special char).
-- `AdminAddProductPage` and `AdminPartnerManagementPage` use hand-rolled `useState` forms. That's legacy; new forms use RHF + zod.
+- `AdminAddProductPage` uses a hand-rolled `useState` form. That's legacy; new forms use RHF + zod.
 - File uploads: build `FormData` and let the service send it (see `createProduct`, `updateVariant`).
 
 ### Constants
@@ -329,9 +329,9 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - `ProductModal.jsx` calls hooks after an early `return null` (rules-of-hooks) and imports via `'../../../src/hooks/...'`.
 - `AdminProductsPage` calls `toast.error` during render. `keepPreviousData: true` in `AdminHooks.js` is ignored (v5).
 - `AdminDashboardPage` uses dynamic Tailwind classes (`bg-${statusColor}-50`) and hardcoded mock stats/orders.
-- Partners created without a password make `bcrypt.compare` throw on login → 500 instead of 401.
+- Users without a password (e.g. old partner accounts) make `bcrypt.compare` throw on login → 500 instead of 401.
 - Cloudinary uploads happen before controller validation; rejected requests and removed variant images are never
-  deleted (orphans). Partner avatars go into the `carensafe/products` folder.
+  deleted (orphans).
 
 **Structure / inconsistencies**
 - Empty, unmounted stubs: `routes/user/user/user.routes.js`, `controllers/user/user/user.controller.js`,
@@ -346,8 +346,6 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
   devDeps with no TS in the project. There's no backend lint or tests anywhere.
 - `backend/test_real.png` (1×1 test image) is committed in the backend root.
 - Frontend: flat `services/AdminService.js` + single `hooks/Admin/AdminHooks.js` instead of per-feature folders.
-  Partner hooks don't exist, and `AdminPartnerManagementPage` calls services directly with manual `useState`
-  fetching and its own pagination UI.
 - Service and hook file casing is mixed (`Auth/authService.js`, `AdminService.js`, `AuthHooks.js`).
 - `AdminRoutes.jsx` redefines a local `FRONTEND_ROUTES`. Many paths are hardcoded (`"/home"`, `"/admin/products"`,
   axios `/user/auth/refresh`). `FRONTEND_ROUTES` lacks the admin sub-pages.

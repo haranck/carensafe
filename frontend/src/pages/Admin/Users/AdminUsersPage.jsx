@@ -57,7 +57,6 @@ const AdminUsersPage = () => {
             <thead className="bg-slate-50/80 text-slate-500 font-bold border-b border-slate-100 uppercase tracking-wider text-[12px]">
               <tr>
                 <th className="px-6 py-4">User</th>
-                <th className="px-6 py-4">Role</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Joined</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -66,7 +65,7 @@ const AdminUsersPage = () => {
             <tbody className="divide-y divide-slate-50">
               {isLoading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                     <div className="flex justify-center">
                       <div className="animate-spin w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full"></div>
                     </div>
@@ -74,13 +73,13 @@ const AdminUsersPage = () => {
                 </tr>
               ) : isError ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-rose-500 font-bold">
+                  <td colSpan="4" className="px-6 py-8 text-center text-rose-500 font-bold">
                     Failed to load users.
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                     No users found matching "{debouncedSearch}".
                   </td>
                 </tr>
@@ -103,11 +102,6 @@ const AdminUsersPage = () => {
                           <p className="text-[12px] text-slate-500">{user.email}</p>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 tracking-wider">
-                        {user.role}
-                      </span>
                     </td>
                     <td className="px-6 py-4">
                       {user.isBlocked ? (

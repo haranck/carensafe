@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Package, ShoppingBag, BarChart2, Wallet, IdCard, PlusCircle } from "lucide-react";
+import { LayoutDashboard, Users, Package, ShoppingBag, BarChart2, Wallet, PlusCircle } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
@@ -9,7 +9,6 @@ const NAV_ITEMS = [
   { label: "Orders", icon: ShoppingBag, path: "/admin/orders" },
   { label: "Sales Reports", icon: BarChart2, path: "/admin/sales-reports" },
   { label: "Earnings", icon: Wallet, path: "/admin/earnings" },
-  { label: "Partner Management", icon: IdCard, path: "/admin/partner-management" },
 ];
 
 const AdminSidebar = ({ isSidebarOpen }) => {

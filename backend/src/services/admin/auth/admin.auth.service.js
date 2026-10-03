@@ -26,8 +26,7 @@ class AdminAuthService {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
-                isAdmin: user.isAdmin,
-                role: user.role
+                isAdmin: user.isAdmin
             }
         };
     }

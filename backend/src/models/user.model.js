@@ -40,25 +40,9 @@ const userSchema = new mongoose.Schema(
             type: String
         },
 
-        role: {
-            type: String,
-            enum: ['USER', 'AREA_MANAGER', 'DISTRIBUTOR', 'PROMOTER'],
-            default: 'USER'
-        },
-
-        distributorId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            default: null
-        },
         isAdmin: {
             type: Boolean,
             default: false
-        },
-        areaManagerId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            default: null
         }
     },
     {

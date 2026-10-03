@@ -139,7 +139,6 @@ class AuthService {
             email: signupData.email,
             password: signupData.hashedPassword,
             phone: signupData.phone,
-            role: 'USER',
             isAdmin: false
         });
 
@@ -191,7 +190,6 @@ class AuthService {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
-                role: user.role,
                 isAdmin: user.isAdmin
             },
             accessToken,
@@ -222,8 +220,7 @@ class AuthService {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
-                isAdmin: user.isAdmin,
-                role: user.role
+                isAdmin: user.isAdmin
             }
         };
     }

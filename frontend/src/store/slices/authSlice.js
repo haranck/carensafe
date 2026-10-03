@@ -3,7 +3,6 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   user: null,
   isAuthenticated: false,
-  role: null,
 };
 
 const authSlice = createSlice({
@@ -22,11 +21,8 @@ const authSlice = createSlice({
         phone: payload.phone || "",
         isBlocked: payload.isBlocked || false,
         avatarUrl: payload.avatarUrl || null,
-        role: payload.role || "USER",
         isAdmin: payload.isAdmin || false,
-        distributorId: payload.distributorId || null,
-        areaManagerId: payload.areaManagerId || null,
-        
+
         // Also keep extra frontend-specific fields like hasWorkspace
         hasWorkspace: payload.hasWorkspace || false,
         
@@ -35,12 +31,10 @@ const authSlice = createSlice({
       };
       
       state.isAuthenticated = true;
-      state.role = payload.role || "USER";
     },
     clearAuth(state) {
       state.user = null;
       state.isAuthenticated = false;
-      state.role = null;
     },
     updateAvatar(state, action) {
       if (state.user) {

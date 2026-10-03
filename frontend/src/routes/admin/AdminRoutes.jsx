@@ -10,7 +10,6 @@ import AdminAddProductPage from "../../pages/Admin/Products/AdminAddProductPage"
 import AdminOrdersPage from "../../pages/Admin/Orders/AdminOrdersPage";
 import AdminSalesReportsPage from "../../pages/Admin/SalesReports/AdminSalesReportsPage";
 import AdminEarningsPage from "../../pages/Admin/Earnings/AdminEarningsPage";
-import AdminPartnerManagementPage from "../../pages/Admin/PartnerManagement/AdminPartnerManagementPage";
 
 const toRelative = (path) => path.replace(/^\/admin\//, '');
 
@@ -34,7 +33,6 @@ const AdminRoutes = () => {
         <Route path="orders" element={<AdminOrdersPage />} />
         <Route path="sales-reports" element={<AdminSalesReportsPage />} />
         <Route path="earnings" element={<AdminEarningsPage />} />
-        <Route path="partner-management" element={<AdminPartnerManagementPage />} />
       </Route>
     </Routes>
   );

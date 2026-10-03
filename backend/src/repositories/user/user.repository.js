@@ -22,16 +22,8 @@ class UserRepository {
         return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
-    findByRole(role) {
-        return User.find({ role });
-    }
-
     updateById(userId, updateData) {
         return User.findByIdAndUpdate(userId, updateData, { returnDocument: 'after', runValidators: true });
-    }
-
-    updateRole(userId, role) {
-        return User.findByIdAndUpdate(userId, { role }, { returnDocument: 'after', runValidators: true });
     }
 
     updateBlockStatus(userId, isBlocked) {
@@ -44,18 +36,6 @@ class UserRepository {
 
     existsByEmail(email) {
         return User.exists({ email: email.toLowerCase() });
-    }
-
-    findPromotersByDistributor(distributorId) {
-        return User.find({ role: 'PROMOTER', distributorId });
-    }
-
-    findPromotersByAreaManager(areaManagerId) {
-        return User.find({ role: 'PROMOTER', areaManagerId });
-    }
-
-    findDistributorsByAreaManager(areaManagerId) {
-        return User.find({ role: 'DISTRIBUTOR', areaManagerId });
     }
 }
 
