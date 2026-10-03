@@ -30,7 +30,7 @@ function parseRedisUrl(rawUrl) {
   return trimmed;
 }
 
-const MONGO_URI =(process.env.MONGO_URI || '').trim();
+const MONGO_URI = (process.env.MONGO_URI || '').trim();
 if (!MONGO_URI) {
   throw new Error('Missing required environment variable: MONGO_URI');
 }
@@ -61,6 +61,12 @@ const env = {
   CLOUDINARY_CLOUD_NAME: (process.env.CLOUDINARY_CLOUD_NAME || '').trim(),
   CLOUDINARY_API_KEY: (process.env.CLOUDINARY_API_KEY || '').trim(),
   CLOUDINARY_API_SECRET: (process.env.CLOUDINARY_API_SECRET || '').trim(),
+
+  SMTP_HOST: (process.env.SMTP_HOST || '').trim(),
+  SMTP_PORT: parseInt((process.env.SMTP_PORT || '587').trim(), 10),
+  SMTP_USER: (process.env.SMTP_USER || '').trim(),
+  SMTP_PASS: (process.env.SMTP_PASS || '').trim(),
+  SMTP_FROM: (process.env.SMTP_FROM || '').trim(),
 };
 
 module.exports = env;

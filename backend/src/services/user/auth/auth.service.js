@@ -3,7 +3,7 @@ const passwordUtil = require('../../../utils/password');
 const otpUtil = require('../../../utils/otp');
 const redisUtil = require('../../../utils/redis');
 const jwtUtil = require('../../../utils/jwt');
-const emailUtil = require('../../../utils/email');
+const emailService = require('./email.service');
 
 class AuthService {
     async signup({ firstName, lastName, email, password, phone }) {
@@ -41,8 +41,8 @@ class AuthService {
         // Reset attempts
         await redisUtil.setEx(attemptsKey, expirationTime, 0);
 
-        // 5. Send OTP via actual Email Utility
-        await emailUtil.sendOtpEmail(normalizedEmail, otp);
+        // 5. Send OTP via Email Service
+        await emailService.sendOtpEmail(normalizedEmail, otp);
 
         return {
             message: 'OTP sent to email. Verification required to complete signup.',
@@ -76,7 +76,7 @@ class AuthService {
         await redisUtil.setEx(redisKey, expirationTime, signupData);
         await redisUtil.setEx(attemptsKey, expirationTime, 0);
 
-        await emailUtil.sendOtpEmail(normalizedEmail, otp);
+        await emailService.sendOtpEmail(normalizedEmail, otp);
 
         return {
             message: 'OTP resent successfully.',
