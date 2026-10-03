@@ -1,174 +1,130 @@
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Truck, ShieldCheck, Heart, ShoppingBag, Search, User, LogOut, ChevronDown, Wallet } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
+import { AnimatePresence, LazyMotion, domAnimation } from "framer-motion";
 import { clearAccessToken } from "../../store/slices/tokenSlice";
 import { clearAuth } from "../../store/slices/authSlice";
+import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
+import { CONTAINER } from "../../constants/customerTheme";
+import AnnouncementBar from "./HeaderParts/AnnouncementBar";
+import NavLinks from "./HeaderParts/NavLinks";
+import HeaderActions from "./HeaderParts/HeaderActions";
+import SearchPanel from "./HeaderParts/SearchPanel";
+import MobileDrawer from "./HeaderParts/MobileDrawer";
+import { FOCUS_RING } from "./HeaderParts/navConfig";
 
-const NAV_LINKS = [
-  { label: "Home",              to: "/" },
-  { label: "Shop",              to: "/shop" },
-  { label: "Technology & Care", to: "/technology" },
-  { label: "Care Shorts",       to: "/care-shorts" },
-  { label: "About Us",          to: "/about" },
-  { label: "Contact",           to: "/contact" },
-];
+const SEARCH_ID = "header-search";
+const DRAWER_ID = "header-mobile-drawer";
 
 export const Header = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  const accessToken = useSelector((s) => s.token.accessToken);
   const user = useSelector((s) => s.auth.user);
-  const isAuthenticated = useSelector((s) => s.auth.isAuthenticated);
+  const isLoggedIn = Boolean(accessToken);
 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropRef = useRef(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const isScrolledRef = useRef(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  // Close overlays on route change (state adjusted during render, no effect needed)
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    setIsSearchOpen(false);
+    setIsDrawerOpen(false);
+  }
+
+  // Only re-render when crossing the threshold, not on every scroll pixel
   useEffect(() => {
-    const close = (e) => { if (dropRef.current && !dropRef.current.contains(e.target)) setDropdownOpen(false); };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    const handleScroll = () => {
+      const scrolled = window.scrollY > 10;
+      if (scrolled !== isScrolledRef.current) {
+        isScrolledRef.current = scrolled;
+        setIsScrolled(scrolled);
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const closeSearch = useCallback(() => setIsSearchOpen(false), []);
+  const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
 
   const handleLogout = () => {
     dispatch(clearAccessToken());
     dispatch(clearAuth());
-    setDropdownOpen(false);
-    navigate("/login");
+    navigate(FRONTEND_ROUTES.LOGIN);
   };
 
-  const initial = user?.firstName?.[0]?.toUpperCase() || "U";
-
   return (
-    <header className="w-full bg-white sticky top-0 z-[100]" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <LazyMotion features={domAnimation} strict>
+      <AnnouncementBar />
 
-      {/* ── Top bar ── */}
-      <div
-        className="text-white/90 text-[10px] font-medium tracking-wide py-[5px] px-4"
-        style={{ background: "linear-gradient(90deg,#1e1a3a 0%,#3b2a8a 50%,#d6008a 100%)" }}
-      >
-        <div className="flex items-center justify-center gap-4 flex-wrap">
-          <span className="flex items-center gap-1"><Truck size={10} /> Free Delivery Above ₹399</span>
-          <span className="text-white/30 hidden sm:inline">|</span>
-          <span className="hidden sm:flex items-center gap-1"><ShieldCheck size={10} /> NABL Certified</span>
-          <span className="text-white/30 hidden md:inline">|</span>
-          <span className="hidden md:flex items-center gap-1"><Heart size={10} /> 25 Lakh+ Happy Women</span>
-          <span className="text-white/30 hidden lg:inline">|</span>
-          <span className="hidden lg:flex items-center gap-1">100% Organic Cotton</span>
-        </div>
-      </div>
-
-      {/* ── Main nav ── */}
-      <div className="border-b border-gray-100">
-        <div className="max-w-[1200px] mx-auto px-5 h-[52px] flex items-center justify-between gap-5">
-
-          {/* Logo */}
-          <Link to="/" className="flex-shrink-0">
-            <img src="/logo.webp" alt="Care N Safe" className="h-[36px] w-auto object-contain" />
-          </Link>
-
-          {/* Nav links */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {NAV_LINKS.map(({ label, to }) => {
-              // Make Home point to /home if authenticated to match the routes
-              const targetRoute = (label === "Home" && isAuthenticated) ? "/home" : to;
-              // Highlight Home if we are on / or /home
-              const active = pathname === targetRoute || (label === "Home" && pathname === "/");
-              
-              return (
+      {/* Floating capsule: 1px gradient border wrapper around a frosted white body */}
+      <header className="sticky top-3 z-[100] mt-3">
+        <div className={CONTAINER}>
+          <div className="relative">
+            <div
+              className={`rounded-[22px] bg-gradient-to-r from-violet-200/80 via-pink-200/80 to-violet-200/80 p-px transition-shadow duration-300 ${
+                isScrolled
+                  ? "shadow-[0_16px_40px_-18px_rgba(59,42,138,0.4)]"
+                  : "shadow-[0_10px_30px_-22px_rgba(59,42,138,0.3)]"
+              }`}
+            >
+              <div
+                className={`flex h-16 items-center justify-between gap-4 rounded-[21px] px-4 backdrop-blur-md transition-colors duration-300 lg:px-5 ${
+                  isScrolled ? "bg-white/95" : "bg-white/80"
+                }`}
+              >
                 <Link
-                  key={label}
-                  to={targetRoute}
-                  className={`text-[13px] px-3 py-1.5 rounded-md no-underline transition-colors duration-150
-                    ${active
-                      ? "text-[#1a56db] font-semibold bg-blue-50/70"
-                      : "text-gray-600 font-normal hover:text-[#1a56db] hover:bg-gray-50"
-                    }`}
+                  to={isLoggedIn ? FRONTEND_ROUTES.HOME : FRONTEND_ROUTES.LANDING}
+                  aria-label="Care N Safe home"
+                  className={`flex-shrink-0 rounded-lg ${FOCUS_RING}`}
                 >
-                  {label}
+                  <img src="/logo.webp" alt="Care N Safe" width={62} height={40} className="h-10 w-[62px] object-contain" />
                 </Link>
-              );
-            })}
-          </nav>
 
-          {/* Right icons */}
-          <div className="flex items-center gap-1">
+                <NavLinks isLoggedIn={isLoggedIn} />
 
-            {/* Search */}
-            <button className="p-2 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors duration-150 border-none bg-transparent cursor-pointer" aria-label="Search">
-              <Search size={18} strokeWidth={1.8} />
-            </button>
-
-            {/* Wishlist */}
-            <button className="p-2 rounded-md text-gray-500 hover:text-rose-500 hover:bg-rose-50/60 transition-colors duration-150 border-none bg-transparent cursor-pointer" aria-label="Wishlist">
-              <Heart size={18} strokeWidth={1.8} />
-            </button>
-
-            {/* Cart */}
-            <Link to="#" className="p-2 rounded-md text-gray-500 hover:text-violet-600 hover:bg-violet-50/60 transition-colors duration-150 no-underline" aria-label="Cart">
-              <ShoppingBag size={18} strokeWidth={1.8} />
-            </Link>
-
-            {/* Wallet */}
-            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-gray-500 hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
-              <Wallet size={16} strokeWidth={1.8} />
-              <span className="text-[12px] font-semibold text-gray-700">₹0</span>
+                <HeaderActions
+                  isLoggedIn={isLoggedIn}
+                  user={user}
+                  isSearchOpen={isSearchOpen}
+                  searchId={SEARCH_ID}
+                  onToggleSearch={() => setIsSearchOpen((open) => !open)}
+                  isDrawerOpen={isDrawerOpen}
+                  drawerId={DRAWER_ID}
+                  onOpenDrawer={() => setIsDrawerOpen(true)}
+                  onLogout={handleLogout}
+                />
+              </div>
             </div>
 
-            {/* Divider */}
-            <div className="w-px h-5 bg-gray-200 mx-1" />
-
-            {/* Auth: Profile or Login */}
-            {isAuthenticated && user ? (
-              <div className="relative" ref={dropRef}>
-                <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-gray-50 transition-colors duration-150 border-none bg-transparent cursor-pointer"
-                >
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#3b2a8a] to-[#d6008a] flex items-center justify-center text-white text-[11px] font-semibold">
-                    {initial}
-                  </div>
-                  <span className="text-[12.5px] font-medium text-gray-700 hidden sm:inline max-w-[80px] truncate">
-                    {user.firstName}
-                  </span>
-                  <ChevronDown size={13} className={`text-gray-400 transition-transform duration-150 ${dropdownOpen ? "rotate-180" : ""}`} />
-                </button>
-
-                {dropdownOpen && (
-                  <div className="absolute right-0 mt-1.5 w-48 bg-white border border-gray-100 rounded-lg shadow-lg py-1 z-50">
-                    <div className="px-3 py-2 border-b border-gray-100">
-                      <p className="text-[12.5px] font-semibold text-gray-800 truncate">{user.firstName} {user.lastName}</p>
-                      <p className="text-[10.5px] text-gray-400 truncate">{user.email}</p>
-                    </div>
-                    <Link to="/profile" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-2 text-[12.5px] text-gray-600 hover:bg-gray-50 no-underline transition-colors">
-                      <User size={14} /> Profile
-                    </Link>
-                    <Link to="#" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2 px-3 py-2 text-[12.5px] text-gray-600 hover:bg-gray-50 no-underline transition-colors">
-                      <ShoppingBag size={14} /> Orders
-                    </Link>
-                    <div className="border-t border-gray-100">
-                      <button onClick={handleLogout} className="flex items-center gap-2 w-full px-3 py-2 text-[12.5px] text-rose-500 hover:bg-rose-50 border-none bg-transparent cursor-pointer transition-colors">
-                        <LogOut size={14} /> Logout
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className="flex items-center gap-1.5 px-4 py-[7px] rounded-md no-underline text-[12.5px] font-semibold text-white bg-[#1a56db] hover:bg-[#1648b8] transition-colors duration-150"
-              >
-                <User size={14} strokeWidth={2} />
-                Login
-              </Link>
-            )}
-
+            <AnimatePresence>
+              {isSearchOpen && <SearchPanel key="search" id={SEARCH_ID} onClose={closeSearch} />}
+            </AnimatePresence>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Rendered outside <header>: the capsule's backdrop-blur would otherwise trap position:fixed */}
+      <AnimatePresence>
+        {isDrawerOpen && (
+          <MobileDrawer
+            key="drawer"
+            id={DRAWER_ID}
+            isLoggedIn={isLoggedIn}
+            user={user}
+            onClose={closeDrawer}
+            onLogout={handleLogout}
+          />
+        )}
+      </AnimatePresence>
+    </LazyMotion>
   );
 };
 

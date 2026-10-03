@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import PublicRoute from "../PublicRoute";
 import ProtectedRoute from "../ProtectedRoute";
@@ -5,7 +6,9 @@ import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 import SignupPage from "../../pages/Auth/SignupPage";
 import LoginPage from "../../pages/Auth/LoginPage";
 import LandingPage from "../../pages/LandingPage";
-import HomePage from "../../pages/HomePage";
+import PageLoader from "../../components/common/PageLoader";
+
+const HomePage = lazy(() => import("../../pages/HomePage"));
 
 const UserRoutes = () => {
     return (
@@ -19,7 +22,14 @@ const UserRoutes = () => {
 
             {/* Protected routes (redirect to /login if not logged in) */}
             <Route element={<ProtectedRoute />}>
-                <Route path={FRONTEND_ROUTES.HOME} element={<HomePage />} />
+                <Route
+                    path={FRONTEND_ROUTES.HOME}
+                    element={
+                        <Suspense fallback={<PageLoader />}>
+                            <HomePage />
+                        </Suspense>
+                    }
+                />
             </Route>
         </Routes>
     );

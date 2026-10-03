@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 export const Footer = () => {
   return (
     <footer className="bg-[#2c265a] text-slate-300 py-10 px-4 sm:px-6 lg:px-8 font-sans border-t border-slate-700/50">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         
         {/* Brand Column */}
         <div className="space-y-3">
@@ -70,7 +70,7 @@ export const Footer = () => {
       </div>
 
       {/* Bottom Bar */}
-      <div className="max-w-7xl mx-auto mt-8 pt-5 border-t border-slate-700/50 flex flex-col md:flex-row items-center justify-between gap-3 text-[10px] text-slate-500">
+      <div className="max-w-[1600px] mx-auto mt-8 pt-5 border-t border-slate-700/50 flex flex-col md:flex-row items-center justify-between gap-3 text-[10px] text-slate-500">
         <p>© 2026 Care N Safe. All Rights Reserved.</p>
         <div className="flex gap-1.5">
           {["UPI", "RuPay", "Visa", "Mastercard", "NetBanking"].map(method => (

@@ -23,6 +23,44 @@ class ProductRepository {
         return Product.find({ isActive: true }).sort({ createdAt: -1 });
     }
 
+    // Storefront listing: one item per active variant of an active product.
+    // `filter` and `sort` apply to the flattened item fields (name, productName, price, createdAt, ...).
+    async findActiveVariantsPaginated(filter = {}, sort = { createdAt: -1, _id: 1 }, page = 1, limit = 12) {
+        const skip = (page - 1) * limit;
+        const [result] = await Product.aggregate([
+            { $match: { isActive: true } },
+            { $unwind: '$variants' },
+            { $match: { 'variants.isActive': true } },
+            {
+                $project: {
+                    _id: '$variants._id',
+                    productId: '$_id',
+                    productName: '$name',
+                    name: '$variants.name',
+                    size: '$variants.size',
+                    price: '$variants.price',
+                    stock: '$variants.stock',
+                    image: { $arrayElemAt: ['$variants.images.url', 0] },
+                    createdAt: '$createdAt'
+                }
+            },
+            { $match: filter },
+            { $sort: sort },
+            {
+                $facet: {
+                    data: [{ $skip: skip }, { $limit: limit }],
+                    total: [{ $count: 'count' }]
+                }
+            }
+        ]);
+        const total = result.total[0]?.count || 0;
+        return { data: result.data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    }
+
+    findActiveById(productId) {
+        return Product.findOne({ _id: productId, isActive: true }).lean();
+    }
+
     updateById(productId, updateData) {
         return Product.findByIdAndUpdate(
             productId, 

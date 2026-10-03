@@ -6,6 +6,10 @@ export const API_ROUTES = {
         LOGIN: "/user/auth/login",
         LOGOUT: "/user/auth/logout",
     },
+    PRODUCTS: {
+        LIST: "/user/products",
+        DETAIL: (id) => `/user/products/${id}`,
+    },
     ADMIN_AUTH: {
         LOGIN: "/admin/auth/login",
     },
