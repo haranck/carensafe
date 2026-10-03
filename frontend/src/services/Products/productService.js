@@ -6,7 +6,17 @@ export const getProducts = async (params = {}) => {
     return response.data;
 };
 
+export const getProductFilters = async () => {
+    const response = await AxiosInstance.get(API_ROUTES.PRODUCTS.FILTERS);
+    return response.data;
+};
+
 export const getProductById = async (id) => {
     const response = await AxiosInstance.get(API_ROUTES.PRODUCTS.DETAIL(id));
+    return response.data;
+};
+
+export const getSimilarProducts = async (id, limit) => {
+    const response = await AxiosInstance.get(API_ROUTES.PRODUCTS.SIMILAR(id), { params: { limit } });
     return response.data;
 };

@@ -8,7 +8,9 @@ export const API_ROUTES = {
     },
     PRODUCTS: {
         LIST: "/user/products",
+        FILTERS: "/user/products/filters",
         DETAIL: (id) => `/user/products/${id}`,
+        SIMILAR: (id) => `/user/products/${id}/similar`,
     },
     ADMIN_AUTH: {
         LOGIN: "/admin/auth/login",

@@ -12,6 +12,8 @@ import HeaderActions from "./HeaderParts/HeaderActions";
 import SearchPanel from "./HeaderParts/SearchPanel";
 import MobileDrawer from "./HeaderParts/MobileDrawer";
 import { FOCUS_RING } from "./HeaderParts/navConfig";
+import { usePrefetchShop } from "../../hooks/Shop/ShopHooks";
+import { runWhenIdle } from "../../utils/idle";
 
 const SEARCH_ID = "header-search";
 const DRAWER_ID = "header-mobile-drawer";
@@ -50,6 +52,10 @@ export const Header = () => {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Warm the default shop view while idle, so the Shop link opens with products already loaded
+  const prefetchShop = usePrefetchShop();
+  useEffect(() => runWhenIdle(() => prefetchShop()), [prefetchShop]);
 
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);

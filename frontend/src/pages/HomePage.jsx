@@ -11,6 +11,7 @@ import Testimonials from "../components/Home/Testimonials";
 import CtaBanner from "../components/Home/CtaBanner";
 import { ViewAllLink } from "../components/Home/SectionHeading";
 import { PAGE_BACKGROUND } from "../constants/customerTheme";
+import { shopPath } from "../constants/frontendRoutes";
 
 const HomePage = () => {
   const user = useSelector((state) => state.auth.user);
@@ -45,7 +46,7 @@ const HomePage = () => {
                 accent: "Buy",
                 description: "Everyday essentials, one tap away.",
               }}
-              params={{ category: "sanitary_pads", sort: "price_asc", limit: 6 }}
+              params={{ combo: false, sort: "price_asc", limit: 6 }}
               layout="compact"
               className="bg-gradient-to-b from-white to-[#fff5fa]"
             />
@@ -58,8 +59,9 @@ const HomePage = () => {
                 after: "Packs",
                 description: "More protection in one pack, for less.",
               }}
-              params={{ category: "combo_packs", limit: 4 }}
+              params={{ combo: true, limit: 4 }}
               layout="feature"
+              action={<ViewAllLink to={shopPath({ combo: true })} />}
             />
 
             <ExploreProducts />

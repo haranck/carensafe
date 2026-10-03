@@ -2,15 +2,25 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 import { FOCUS_RING } from "../../constants/customerTheme";
+import { usePrefetchShop } from "../../hooks/Shop/ShopHooks";
 
-export const ViewAllLink = ({ to = FRONTEND_ROUTES.SHOP, label = "View All" }) => (
-  <Link
-    to={to}
-    className={`inline-flex h-10 w-fit flex-shrink-0 items-center gap-1.5 rounded-full border border-pink-200 bg-white px-4 text-[13px] font-bold text-[#d6008a] hover:bg-[#fff5fa] hover:border-[#d6008a] transition-colors ${FOCUS_RING}`}
-  >
-    {label} <ArrowRight size={15} aria-hidden="true" />
-  </Link>
-);
+// Links to a shop view; hover / focus / touch loads that view's products ahead of the click
+export const ViewAllLink = ({ to = FRONTEND_ROUTES.SHOP, label = "View All" }) => {
+  const prefetchShop = usePrefetchShop();
+  const handleIntent = () => prefetchShop(to.split("?")[1] || "");
+
+  return (
+    <Link
+      to={to}
+      onMouseEnter={handleIntent}
+      onFocus={handleIntent}
+      onTouchStart={handleIntent}
+      className={`inline-flex h-10 w-fit flex-shrink-0 items-center gap-1.5 rounded-full border border-pink-200 bg-white px-4 text-[13px] font-bold text-[#d6008a] hover:bg-[#fff5fa] hover:border-[#d6008a] transition-colors ${FOCUS_RING}`}
+    >
+      {label} <ArrowRight size={15} aria-hidden="true" />
+    </Link>
+  );
+};
 
 // Eyebrow pill + heading with one italic serif accent phrase
 const SectionHeading = ({ id, eyebrow, before, accent, after, description, action }) => (

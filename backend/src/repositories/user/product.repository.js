@@ -23,28 +23,50 @@ class ProductRepository {
         return Product.find({ isActive: true }).sort({ createdAt: -1 });
     }
 
-    // Storefront listing: one item per active variant of an active product.
-    // `filter` and `sort` apply to the flattened item fields (name, productName, price, createdAt, ...).
-    async findActiveVariantsPaginated(filter = {}, sort = { createdAt: -1, _id: 1 }, page = 1, limit = 12) {
+    async findActiveProductsPaginated({ match = {}, variantFilter = true, sort = { createdAt: -1, _id: 1 }, page = 1, limit = 12 }) {
         const skip = (page - 1) * limit;
         const [result] = await Product.aggregate([
-            { $match: { isActive: true } },
-            { $unwind: '$variants' },
-            { $match: { 'variants.isActive': true } },
+            { $match: { isActive: true, ...match } },
             {
-                $project: {
-                    _id: '$variants._id',
-                    productId: '$_id',
-                    productName: '$name',
-                    name: '$variants.name',
-                    size: '$variants.size',
-                    price: '$variants.price',
-                    stock: '$variants.stock',
-                    image: { $arrayElemAt: ['$variants.images.url', 0] },
-                    createdAt: '$createdAt'
+                $addFields: {
+                    activeVariants: { $filter: { input: '$variants', as: 'v', cond: { $eq: ['$$v.isActive', true] } } }
                 }
             },
-            { $match: filter },
+            {
+                $addFields: {
+                    matchingVariants: { $filter: { input: '$activeVariants', as: 'v', cond: variantFilter } }
+                }
+            },
+            { $match: { 'matchingVariants.0': { $exists: true } } },
+            {
+                $addFields: {
+                    inStockVariants: { $filter: { input: '$matchingVariants', as: 'v', cond: { $gt: ['$$v.stock', 0] } } }
+                }
+            },
+            {
+                $project: {
+                    name: 1,
+                    createdAt: 1,
+                    minPrice: { $min: '$matchingVariants.price' },
+                    maxPrice: { $max: '$matchingVariants.price' },
+                    sizes: '$activeVariants.size',
+                    inStock: { $gt: [{ $size: '$inStockVariants' }, 0] },
+                    // First in-stock matching variant, else the first matching one
+                    defaultVariant: {
+                        $let: {
+                            vars: { dv: { $arrayElemAt: [{ $concatArrays: ['$inStockVariants', '$matchingVariants'] }, 0] } },
+                            in: {
+                                _id: '$$dv._id',
+                                name: '$$dv.name',
+                                size: '$$dv.size',
+                                price: '$$dv.price',
+                                stock: '$$dv.stock',
+                                images: { $slice: ['$$dv.images.url', 2] }
+                            }
+                        }
+                    }
+                }
+            },
             { $sort: sort },
             {
                 $facet: {
@@ -52,9 +74,16 @@ class ProductRepository {
                     total: [{ $count: 'count' }]
                 }
             }
-        ]);
+        ]).collation({ locale: 'en', strength: 2 });
         const total = result.total[0]?.count || 0;
         return { data: result.data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    }
+
+    // Only what the shop filter options need
+    findActiveForFilters() {
+        return Product.find({ isActive: true })
+            .select('name variants.size variants.price variants.isActive')
+            .lean();
     }
 
     findActiveById(productId) {
