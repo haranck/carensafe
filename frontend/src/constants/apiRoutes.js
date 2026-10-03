@@ -12,6 +12,12 @@ export const API_ROUTES = {
         DETAIL: (id) => `/user/products/${id}`,
         SIMILAR: (id) => `/user/products/${id}/similar`,
     },
+    WISHLIST: {
+        LIST: "/user/wishlist",
+        IDS: "/user/wishlist/ids",
+        ADD: "/user/wishlist",
+        REMOVE: (productId) => `/user/wishlist/${productId}`,
+    },
     ADMIN_AUTH: {
         LOGIN: "/admin/auth/login",
     },

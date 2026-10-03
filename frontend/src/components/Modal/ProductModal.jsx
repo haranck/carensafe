@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Edit, Package, Image as ImageIcon } from 'lucide-react';
+import { X, Save, Edit, Package, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 import { useUpdateProductStatus, useUpdateVariant } from '../../../src/hooks/Admin/AdminHooks';
 import toast from 'react-hot-toast';
+import ConfirmDialog from '../common/ConfirmDialog';
+import { getErrorMessage } from '../../utils/errorMessage';
 
 const ProductModal = ({ isOpen, onClose, product }) => {
     if (!isOpen || !product) return null;
@@ -85,6 +87,19 @@ const VariantItem = ({ product, variant }) => {
     }, [variant, isEditing]);
 
     const updateVariantMutation = useUpdateVariant();
+    const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
+
+    // Saves that change what customers see, or delete saved images, are confirmed first
+    const statusChanged = formData.isActive !== variant.isActive;
+    const removedImageCount = (variant.images || []).length - existingImages.length;
+    const saveWarnings = [
+        statusChanged && (formData.isActive
+            ? 'This variant will be visible to customers again.'
+            : 'This variant will be hidden from customers.'),
+        removedImageCount > 0 &&
+            `${removedImageCount} saved image${removedImageCount === 1 ? '' : 's'} will be permanently removed.`,
+    ].filter(Boolean);
+    const isDestructiveSave = (statusChanged && !formData.isActive) || removedImageCount > 0;
 
     const handleImageChange = (e) => {
         const files = Array.from(e.target.files);
@@ -111,6 +126,14 @@ const VariantItem = ({ product, variant }) => {
     };
 
     const handleSave = () => {
+        if (saveWarnings.length > 0) {
+            setIsSaveConfirmOpen(true);
+            return;
+        }
+        saveVariant();
+    };
+
+    const saveVariant = () => {
         const submitData = new FormData();
         submitData.append('name', formData.name);
         submitData.append('price', formData.price);
@@ -136,8 +159,9 @@ const VariantItem = ({ product, variant }) => {
                 setNewPreviewUrls([]);
             },
             onError: (err) => {
-                toast.error(err.response?.data?.message || 'Failed to update variant');
-            }
+                toast.error(getErrorMessage(err, 'Failed to update variant'));
+            },
+            onSettled: () => setIsSaveConfirmOpen(false)
         });
     };
 
@@ -327,6 +351,18 @@ const VariantItem = ({ product, variant }) => {
                     </div>
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={isSaveConfirmOpen}
+                tone={isDestructiveSave ? 'danger' : 'primary'}
+                icon={isDestructiveSave ? undefined : Save}
+                title="Save changes to this variant?"
+                description={saveWarnings.join(' ')}
+                confirmLabel="Save changes"
+                isPending={updateVariantMutation.isPending}
+                onConfirm={saveVariant}
+                onCancel={() => setIsSaveConfirmOpen(false)}
+            />
         </div>
     );
 };
@@ -334,18 +370,23 @@ const VariantItem = ({ product, variant }) => {
 const ProductStatusTab = ({ product }) => {
     const updateStatusMutation = useUpdateProductStatus();
     const [isActive, setIsActive] = useState(product.isActive);
+    // `nextStatus` is kept after closing so the dialog's text doesn't flip while it animates out
+    const [confirm, setConfirm] = useState({ open: false, nextStatus: !product.isActive });
 
-    const handleToggle = () => {
-        const newStatus = !isActive;
-        setIsActive(newStatus);
+    const handleToggle = () => setConfirm({ open: true, nextStatus: !isActive });
+    const closeConfirm = () => setConfirm((current) => ({ ...current, open: false }));
+
+    const handleConfirm = () => {
+        const newStatus = confirm.nextStatus;
         updateStatusMutation.mutate({ id: product._id, isActive: newStatus }, {
             onSuccess: () => {
+                setIsActive(newStatus);
                 toast.success(`Product is now ${newStatus ? 'active' : 'inactive'}`);
             },
             onError: (err) => {
-                setIsActive(!newStatus); // revert
-                toast.error(err.response?.data?.message || 'Failed to update status');
-            }
+                toast.error(getErrorMessage(err, 'Failed to update status'));
+            },
+            onSettled: closeConfirm
         });
     };
 
@@ -369,6 +410,22 @@ const ProductStatusTab = ({ product }) => {
                     />
                 </button>
             </div>
+
+            <ConfirmDialog
+                open={confirm.open}
+                tone={confirm.nextStatus ? 'primary' : 'danger'}
+                icon={confirm.nextStatus ? Eye : EyeOff}
+                title={confirm.nextStatus ? 'Activate this product?' : 'Deactivate this product?'}
+                description={
+                    confirm.nextStatus
+                        ? `${product.name} will be visible to customers in the shop again.`
+                        : `${product.name} and all its variants will be hidden from customers until you activate it again.`
+                }
+                confirmLabel={confirm.nextStatus ? 'Activate' : 'Deactivate'}
+                isPending={updateStatusMutation.isPending}
+                onConfirm={handleConfirm}
+                onCancel={closeConfirm}
+            />
         </div>
     );
 };

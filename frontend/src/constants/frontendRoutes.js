@@ -31,6 +31,23 @@ export const shopPath = (params = {}) => {
   return search ? `${FRONTEND_ROUTES.SHOP}?${search}` : FRONTEND_ROUTES.SHOP;
 };
 
+// Where a logged-in user can't go back to: the auth pages, and "/" (members have /home)
+const NOT_AFTER_LOGIN = [FRONTEND_ROUTES.LOGIN, FRONTEND_ROUTES.SIGNUP, FRONTEND_ROUTES.LANDING];
+
+// After login: back to the page that sent the user to login (router state `{ from: location }`, set by
+// ProtectedRoute and useRequireAuth), filters / selected variant included, else home. Router state can't come
+// from the URL; still, only internal paths are accepted ("/x", never "//host", "/\host" or a full URL).
+export const postLoginPath = (locationState) => {
+  const from = locationState?.from;
+  const pathname = from?.pathname;
+  const isInternal =
+    typeof pathname === "string" && pathname.startsWith("/") && !pathname.startsWith("//") && !pathname.startsWith("/\\");
+
+  if (!isInternal || NOT_AFTER_LOGIN.includes(pathname)) return FRONTEND_ROUTES.HOME;
+  const search = typeof from.search === "string" && from.search.startsWith("?") ? from.search : "";
+  return `${pathname}${search}`;
+};
+
 // "/product/<id>" or "/product/<id>?variant=<variantId>" (the detail page keeps the selected variant in the URL)
 export const productDetailPath = (id, variantId) => {
   const path = generatePath(FRONTEND_ROUTES.PRODUCT_DETAIL, { id });

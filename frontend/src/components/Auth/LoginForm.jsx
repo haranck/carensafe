@@ -3,11 +3,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useUserLogin } from "../../hooks/Auth/AuthHooks";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { setAccessToken } from "../../store/slices/tokenSlice";
 import { setAuthUser } from "../../store/slices/authSlice";
+import { FRONTEND_ROUTES, postLoginPath } from "../../constants/frontendRoutes";
+import { getErrorMessage } from "../../utils/errorMessage";
 
 // ── Zod schema ──────────────────────────────────────────────
 const loginSchema = z.object({
@@ -64,6 +66,7 @@ const LoginForm = () => {
 
     const { mutate, isPending, isError, error } = useUserLogin();
     const navigate = useNavigate();
+    const location = useLocation();
     const dispatch = useDispatch();
 
     const onSubmit = (data) => {
@@ -71,7 +74,8 @@ const LoginForm = () => {
             onSuccess: (res) => {
                 dispatch(setAccessToken(res.data.accessToken));
                 dispatch(setAuthUser(res.data.user));
-                navigate("/home");
+                // Same target PublicRoute redirects to once the token is set
+                navigate(postLoginPath(location.state), { replace: true });
             }
         });
     };
@@ -100,7 +104,7 @@ const LoginForm = () => {
             {/* API banners */}
             {isError && (
                 <div className="mb-5 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-[12.5px] font-semibold text-center">
-                    {error?.response?.data?.message || error?.message || "Login failed. Please try again."}
+                    {getErrorMessage(error, "Login failed. Please try again.")}
                 </div>
             )}
 
@@ -182,7 +186,8 @@ const LoginForm = () => {
                 {/* Signup link */}
                 <p className="text-center text-[13px] text-slate-500 pt-3">
                     Don't have an account?{" "}
-                    <Link to="/signup" className="text-[#d6008a] font-bold hover:underline">
+                    {/* Pass the return path along, so signing up still brings the user back to where they were */}
+                    <Link to={FRONTEND_ROUTES.SIGNUP} state={location.state} className="text-[#d6008a] font-bold hover:underline">
                         Sign up
                     </Link>
                 </p>

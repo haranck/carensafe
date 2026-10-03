@@ -3,6 +3,7 @@ import VariantSelector from "./VariantSelector";
 import QuantityStepper from "./QuantityStepper";
 import PurchaseButtons from "./PurchaseButtons";
 import RatingStars from "./RatingStars";
+import WishlistButton from "../common/WishlistButton";
 import { FOCUS_RING } from "../../constants/customerTheme";
 import { DUMMY_RATING_SUMMARY } from "../../constants/dummyReviews";
 import {
@@ -99,12 +100,21 @@ const ProductInfo = ({
           ))}
         </div>
 
-        <h1
-          id={titleId}
-          className="mt-3 text-[26px] font-extrabold leading-tight tracking-tight text-[#1e1a3a] sm:text-[32px] xl:text-[36px]"
-        >
-          {cleanName(product.name)}
-        </h1>
+        <div className="mt-3 flex items-start justify-between gap-3">
+          <h1
+            id={titleId}
+            className="min-w-0 text-[26px] font-extrabold leading-tight tracking-tight text-[#1e1a3a] sm:text-[32px] xl:text-[36px]"
+          >
+            {cleanName(product.name)}
+          </h1>
+          <WishlistButton
+            productId={product._id}
+            variantId={variant._id}
+            name={cleanName(product.name)}
+            size={20}
+            className="border border-pink-100 sm:mt-1"
+          />
+        </div>
         <p className="mt-1.5 text-[14px] font-medium text-slate-500">{cleanName(variant.name)}</p>
         <RatingSummaryLink average={DUMMY_RATING_SUMMARY.average} total={DUMMY_RATING_SUMMARY.total} />
       </div>

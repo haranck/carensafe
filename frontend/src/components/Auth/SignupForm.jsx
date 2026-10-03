@@ -3,9 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useUserSignUp } from "../../hooks/Auth/AuthHooks";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { User, Mail, Phone, Lock, Tag, AlertCircle } from "lucide-react";
 import OtpModal from "../Modal/OtpModal";
+import { getErrorMessage } from "../../utils/errorMessage";
+import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 
 // ── Zod schema ──────────────────────────────────────────────
 const signupSchema = z
@@ -78,6 +80,8 @@ const SignupForm = () => {
     } = useForm({ resolver: zodResolver(signupSchema), mode: "onTouched" });
 
     const { mutate, isPending, isError, error, isSuccess } = useUserSignUp();
+    // Router state from the login gate ({ from }): kept on the Login link and through OTP → Login
+    const location = useLocation();
     const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
     const [registeredEmail, setRegisteredEmail] = useState("");
 
@@ -118,7 +122,7 @@ const SignupForm = () => {
             {/* API banners */}
             {isError && (
                 <div className="mb-4 px-4 py-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-semibold text-center">
-                    {error?.response?.data?.message || error?.message || "Registration failed. Please try again."}
+                    {getErrorMessage(error, "Registration failed. Please try again.")}
                 </div>
             )}
 
@@ -192,7 +196,7 @@ const SignupForm = () => {
                 {/* Login link */}
                 <p className="text-center text-xs text-slate-400 pt-1">
                     Already have an account?{" "}
-                    <Link to="/login" className="text-[#d6008a] font-bold hover:underline">
+                    <Link to={FRONTEND_ROUTES.LOGIN} state={location.state} className="text-[#d6008a] font-bold hover:underline">
                         Login
                     </Link>
                 </p>

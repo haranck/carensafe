@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Package, Upload, X, Loader2, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useCreateProduct } from "../../../hooks/Admin/AdminHooks";
+import ConfirmDialog from "../../../components/common/ConfirmDialog";
+import { getErrorMessage } from "../../../utils/errorMessage";
 
 const AdminAddProductPage = () => {
   const [formData, setFormData] = useState({
@@ -94,6 +96,14 @@ const AdminAddProductPage = () => {
     setVariants(newVariants);
   };
 
+  // Variant waiting for "Remove" confirmation; `index` is kept after closing so the text doesn't change mid-animation
+  const [removeConfirm, setRemoveConfirm] = useState({ open: false, index: 0 });
+  const closeRemoveConfirm = () => setRemoveConfirm((current) => ({ ...current, open: false }));
+  const handleConfirmRemove = () => {
+    removeVariant(removeConfirm.index);
+    closeRemoveConfirm();
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -140,7 +150,7 @@ const AdminAddProductPage = () => {
         navigate("/admin/products"); // Redirect back to products list
       },
       onError: (error) => {
-        toast.error(error.response?.data?.message || "Failed to create product");
+        toast.error(getErrorMessage(error, "Failed to create product"));
       }
     });
   };
@@ -209,7 +219,8 @@ const AdminAddProductPage = () => {
               {variants.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => removeVariant(index)}
+                  onClick={() => setRemoveConfirm({ open: true, index })}
+                  aria-label={`Remove variant #${index + 1}`}
                   className="absolute top-4 right-4 w-8 h-8 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-colors"
                 >
                   <Trash2 size={16} />
@@ -344,6 +355,16 @@ const AdminAddProductPage = () => {
         </button>
 
       </form>
+
+      <ConfirmDialog
+        open={removeConfirm.open}
+        icon={Trash2}
+        title={`Remove variant #${removeConfirm.index + 1}?`}
+        description="Everything entered for this variant, including its images, will be discarded."
+        confirmLabel="Remove variant"
+        onConfirm={handleConfirmRemove}
+        onCancel={closeRemoveConfirm}
+      />
     </div>
   );
 };

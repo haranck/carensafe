@@ -1,9 +1,11 @@
 import { useId } from "react";
+import toast from "react-hot-toast";
 import { MessageSquareHeart, PenLine } from "lucide-react";
 import Reveal from "../Home/Reveal";
 import SectionHeading from "../Home/SectionHeading";
 import RatingStars from "./RatingStars";
-import { CONTAINER } from "../../constants/customerTheme";
+import { useRequireAuth } from "../../hooks/Auth/useRequireAuth";
+import { CONTAINER, FOCUS_RING } from "../../constants/customerTheme";
 import { DUMMY_RATING_SUMMARY, DUMMY_REVIEWS } from "../../constants/dummyReviews";
 
 const STAR_LEVELS = [5, 4, 3, 2, 1];
@@ -22,7 +24,17 @@ const barWidth = (count, total) => {
 // TODO: swap the dummy summary/reviews for the reviews API; "Write a Review" becomes the feedback form
 const ProductReviews = ({ summary = DUMMY_RATING_SUMMARY, reviews = DUMMY_REVIEWS }) => {
   const headingId = useId();
+  const requireAuth = useRequireAuth();
   const { average, total, breakdown } = summary;
+
+  // Needs an account (guests go through the login gate); the form itself isn't built yet
+  const handleWriteReview = () => {
+    if (!requireAuth("Log in to write a review")) return;
+    toast("Reviews are coming soon. Stay tuned!", {
+      id: "reviews-coming-soon",
+      icon: <PenLine size={18} aria-hidden="true" className="text-[#d6008a]" />,
+    });
+  };
 
   return (
     <Reveal
@@ -62,8 +74,8 @@ const ProductReviews = ({ summary = DUMMY_RATING_SUMMARY, reviews = DUMMY_REVIEW
             </p>
             <button
               type="button"
-              disabled
-              className="mt-5 inline-flex h-11 w-fit cursor-not-allowed items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-5 text-[13.5px] font-bold text-slate-400"
+              onClick={handleWriteReview}
+              className={`mt-5 inline-flex h-11 w-fit items-center gap-2 rounded-full border border-pink-200 bg-white px-5 text-[13.5px] font-bold text-[#d6008a] hover:border-[#d6008a] hover:bg-[#fff5fa] transition-colors ${FOCUS_RING}`}
             >
               <PenLine size={16} aria-hidden="true" />
               Write a Review

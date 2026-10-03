@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useGetAllUsers, useBlockUser, useUnblockUser } from "../../../hooks/Admin/AdminHooks";
 import { Search, Lock, Unlock, User as UserIcon } from "lucide-react";
 import Pagination from "../../../components/common/Pagination";
+import ConfirmDialog from "../../../components/common/ConfirmDialog";
+import { getErrorMessage } from "../../../utils/errorMessage";
+
+const displayName = (user) => [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
 
 const AdminUsersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,12 +30,28 @@ const AdminUsersPage = () => {
   const users = response?.data || [];
   const paginationInfo = response?.pagination || { total: 0, totalPages: 1 };
 
-  const handleBlock = (userId) => {
-    blockMutation.mutate(userId);
-  };
+  // Block / Unblock waiting for confirmation. `user` is kept after closing so the dialog's text doesn't change
+  // while it animates out.
+  const [confirm, setConfirm] = useState({ open: false, user: null });
+  const confirmUser = confirm.user;
+  const isBlocking = Boolean(confirmUser && !confirmUser.isBlocked);
+  const isConfirming = blockMutation.isPending || unblockMutation.isPending;
 
-  const handleUnblock = (userId) => {
-    unblockMutation.mutate(userId);
+  const askToConfirm = (user) => setConfirm({ open: true, user });
+  const closeConfirm = () => setConfirm((current) => ({ ...current, open: false }));
+
+  const handleConfirm = () => {
+    const user = confirmUser;
+    const mutation = user.isBlocked ? unblockMutation : blockMutation;
+    mutation.mutate(user._id, {
+      onSuccess: () => {
+        toast.success(`${displayName(user)} has been ${user.isBlocked ? "unblocked" : "blocked"}`);
+      },
+      onError: (error) => {
+        toast.error(getErrorMessage(error, "Couldn't update this user. Please try again."));
+      },
+      onSettled: closeConfirm,
+    });
   };
 
   return (
@@ -122,7 +143,7 @@ const AdminUsersPage = () => {
                     <td className="px-6 py-4 text-right">
                       {user.isBlocked ? (
                         <button
-                          onClick={() => handleUnblock(user._id)}
+                          onClick={() => askToConfirm(user)}
                           disabled={unblockMutation.isPending}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-[12px] font-bold transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
                         >
@@ -130,7 +151,7 @@ const AdminUsersPage = () => {
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleBlock(user._id)}
+                          onClick={() => askToConfirm(user)}
                           disabled={blockMutation.isPending}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-[12px] font-bold transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
                         >
@@ -155,6 +176,22 @@ const AdminUsersPage = () => {
           itemsPerPage={itemsPerPage}
         />
       )}
+
+      <ConfirmDialog
+        open={confirm.open}
+        tone={isBlocking ? "danger" : "primary"}
+        icon={isBlocking ? Lock : Unlock}
+        title={confirmUser ? `${isBlocking ? "Block" : "Unblock"} ${displayName(confirmUser)}?` : ""}
+        description={
+          isBlocking
+            ? "They won't be able to log in until you unblock them. Any session they have open ends within 15 minutes."
+            : "They'll be able to log in and shop again."
+        }
+        confirmLabel={isBlocking ? "Block user" : "Unblock user"}
+        isPending={isConfirming}
+        onConfirm={handleConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   );
 };

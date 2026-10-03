@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { X, ShieldCheck } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useVerifyOtp, useResendOtp } from "../../hooks/Auth/AuthHooks";
+import { getErrorMessage } from "../../utils/errorMessage";
+import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 
 const OtpModal = ({ isOpen, onClose, email }) => {
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -10,6 +12,7 @@ const OtpModal = ({ isOpen, onClose, email }) => {
     
     const inputRefs = useRef([]);
     const navigate = useNavigate();
+    const location = useLocation();
 
     const { mutate: verifyMutate, isPending: isVerifying, error: verifyError } = useVerifyOtp();
     const { mutate: resendMutate, isPending: isResending, error: resendError, isSuccess: resendSuccess } = useResendOtp();
@@ -62,7 +65,8 @@ const OtpModal = ({ isOpen, onClose, email }) => {
         verifyMutate({ email, otp: otpValue }, {
             onSuccess: () => {
                 onClose();
-                navigate("/login");
+                // Verifying doesn't log in: on to login, keeping the gate's return path ({ from })
+                navigate(FRONTEND_ROUTES.LOGIN, { state: location.state });
             }
         });
     };
@@ -80,8 +84,8 @@ const OtpModal = ({ isOpen, onClose, email }) => {
 
     if (!isOpen) return null;
 
-    const errorMsg = verifyError?.response?.data?.message || verifyError?.message;
-    const resendErrorMsg = resendError?.response?.data?.message || resendError?.message;
+    const errorMsg = verifyError ? getErrorMessage(verifyError, "Couldn't verify the code. Please try again.") : "";
+    const resendErrorMsg = resendError ? getErrorMessage(resendError, "Couldn't resend the code. Please try again.") : "";
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">

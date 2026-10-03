@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, AlertCircle, Eye, EyeOff, Shield } from "lucide-react";
 import { useAdminLogin } from "../../../hooks/Auth/AuthHooks";
+import { getErrorMessage } from "../../../utils/errorMessage";
 
 // ── Zod schema ──────────────────────────────────────────────
 const loginSchema = z.object({
@@ -98,7 +99,7 @@ const AdminLoginForm = () => {
             {isError && (
                 <div className="mb-6 p-3 rounded-xl bg-rose-50 text-rose-600 text-[13px] font-semibold text-center border border-rose-100 flex items-center justify-center gap-2">
                     <AlertCircle size={16} />
-                    {error?.response?.data?.message || "Invalid email or password."}
+                    {getErrorMessage(error, "Invalid email or password.")}
                 </div>
             )}
 

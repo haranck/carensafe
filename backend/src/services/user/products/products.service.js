@@ -186,6 +186,42 @@ class ProductsService {
 
         return items.map(toCardItem);
     }
+
+    // List-card shape for one product document (e.g. a wishlist entry). Shows `preferredVariantId` while it's active,
+    // else the first in-stock variant. An inactive product, or one with no active variant, comes back with
+    // `isAvailable: false`, built from all its variants so the card can still show a name and image
+    // (a product deleted from the DB is just `{ _id }`: no name, no image).
+    buildProductCard(product, preferredVariantId) {
+        const allVariants = product.variants || [];
+        const activeVariants = product.isActive ? allVariants.filter((variant) => variant.isActive) : [];
+        const isAvailable = activeVariants.length > 0;
+        const variants = isAvailable ? activeVariants : allVariants;
+        const prices = variants.map((variant) => variant.price);
+        const defaultVariant = variants.find((variant) => String(variant._id) === String(preferredVariantId)) ||
+            variants.find((variant) => variant.stock > 0) ||
+            variants[0] || { images: [] };
+
+        return {
+            ...toCardItem({
+                _id: product._id,
+                name: product.name,
+                createdAt: product.createdAt,
+                minPrice: prices.length > 0 ? Math.min(...prices) : 0,
+                maxPrice: prices.length > 0 ? Math.max(...prices) : 0,
+                sizes: variants.map((variant) => variant.size),
+                inStock: isAvailable && defaultVariant.stock > 0,
+                defaultVariant: {
+                    _id: defaultVariant._id,
+                    name: defaultVariant.name,
+                    size: defaultVariant.size,
+                    price: defaultVariant.price,
+                    stock: defaultVariant.stock,
+                    images: defaultVariant.images.slice(0, 2).map((image) => image.url)
+                }
+            }),
+            isAvailable
+        };
+    }
 }
 
 module.exports = new ProductsService();

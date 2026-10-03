@@ -1,7 +1,7 @@
 import { memo, useState } from "react";
 import { Link } from "react-router-dom";
-import toast from "react-hot-toast";
-import { Heart, ShoppingBag, Package, Truck, Zap } from "lucide-react";
+import { ShoppingBag, Package, Trash2, Truck, Zap } from "lucide-react";
+import WishlistButton, { WishlistHeartButton } from "../common/WishlistButton";
 import { useCartActions } from "../../hooks/Cart/CartHooks";
 import { usePrefetchProduct } from "../../hooks/Products/ProductHooks";
 import { productDetailPath } from "../../constants/frontendRoutes";
@@ -23,6 +23,7 @@ const IMAGE_BACKGROUND = "bg-gradient-to-b from-[#fff5fa] to-[#f5effd]";
 const ACTION_BUTTON = `relative z-10 inline-flex h-10 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-1.5 text-[12px] font-bold transition-all duration-200 active:scale-[0.97] ${FOCUS_RING}`;
 const OUTLINE_BUTTON = "border-2 border-[#d6008a] bg-white text-[#d6008a] hover:border-[#9d0063] hover:bg-[#fff5fa] hover:text-[#9d0063]";
 const GRADIENT_BUTTON = `${BRAND_GRADIENT} text-white shadow-[0_4px_14px_rgba(124,58,237,0.25)] hover:brightness-110`;
+const HEART_POSITION = "absolute top-2 right-2 z-10";
 
 // Card buttons sit inside the card's link overlay: stop them from also opening the detail page
 const stopCardClick = (e) => {
@@ -96,35 +97,6 @@ const Badge = ({ label }) =>
     </span>
   ) : null;
 
-// UI-only toggle until the wishlist API exists
-const WishlistButton = ({ name }) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
-
-  const handleClick = (e) => {
-    stopCardClick(e);
-    setIsWishlisted((value) => !value);
-    // TODO: replace with the wishlist mutation once that API exists
-    toast("Wishlist is coming soon!", {
-      id: "wishlist-coming-soon",
-      icon: <Heart size={18} className="text-[#d6008a]" />,
-    });
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      aria-pressed={isWishlisted}
-      aria-label={`Save ${name} to wishlist`}
-      className={`absolute top-2 right-2 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur-sm transition-colors ${FOCUS_RING} ${
-        isWishlisted ? "text-[#d6008a]" : "text-slate-500 hover:text-[#d6008a]"
-      }`}
-    >
-      <Heart size={18} className={isWishlisted ? "fill-[#d6008a]" : ""} />
-    </button>
-  );
-};
-
 // Add to Cart + Buy Now, sized by the card's own width (container queries): stacked on very small cards,
 // "Add" on narrow ones, "Add to Cart" from ~11rem, icons from ~14rem
 const CardActions = ({ name, inStock, onAdd, onBuy }) =>
@@ -159,6 +131,37 @@ const CompactAddButton = ({ name, inStock, onAdd }) => (
   </button>
 );
 
+// Wishlist page: Move to Cart (or why it can't be bought) + Remove
+const WishlistActions = ({ name, isAvailable, inStock, onMove, onRemove }) => (
+  <div className="flex flex-col gap-1">
+    {!isAvailable && (
+      <p className="flex h-10 items-center justify-center rounded-full bg-slate-100 text-[12px] font-bold text-slate-500">
+        No longer available
+      </p>
+    )}
+    {isAvailable && inStock && (
+      <button type="button" onClick={onMove} aria-label={`Move ${name} to cart`} className={`${ACTION_BUTTON} ${GRADIENT_BUTTON}`}>
+        <ShoppingBag size={15} aria-hidden="true" />
+        Move to Cart
+      </button>
+    )}
+    {isAvailable && !inStock && (
+      <button type="button" disabled className={`${ACTION_BUTTON} cursor-not-allowed bg-slate-100 text-slate-500`}>
+        Out of stock
+      </button>
+    )}
+    <button
+      type="button"
+      onClick={onRemove}
+      aria-label={`Remove ${name} from wishlist`}
+      className={`relative z-10 inline-flex h-10 items-center justify-center gap-1.5 rounded-full text-[12.5px] font-semibold text-slate-500 hover:bg-[#fff5fa] hover:text-[#d6008a] transition-colors ${FOCUS_RING}`}
+    >
+      <Trash2 size={14} aria-hidden="true" />
+      Remove
+    </button>
+  </div>
+);
+
 const StockNote = ({ stock }) =>
   stock > 0 && stock <= LOW_STOCK_LIMIT ? (
     <p className="text-[11.5px] font-semibold text-rose-500">Only {stock} left</p>
@@ -186,17 +189,22 @@ const Price = ({ item, className = "text-[18px]" }) => (
 /**
  * Storefront product card (one item = one product from GET /user/products, with its default variant).
  * layout: "grid" (default), "compact" (horizontal row) or "feature" (wide combo card).
+ * mode "wishlist" (grid only, items from GET /user/wishlist): filled heart and Remove both call `onRemove(item)`,
+ * Move to Cart replaces Add / Buy, and `isAvailable: false` items are greyed out with only Remove.
  */
-const ProductCard = ({ item, layout = "grid" }) => {
-  const { addToCart, buyNow } = useCartActions();
+const ProductCard = ({ item, layout = "grid", mode = "shop", onRemove }) => {
+  const { addToCart, buyNow, moveToCart } = useCartActions();
   const prefetchProduct = usePrefetchProduct();
   const [hasHovered, setHasHovered] = useState(false);
 
+  const isWishlistMode = mode === "wishlist";
+  const isAvailable = item.isAvailable !== false;
   const variant = item.defaultVariant;
   const [image, hoverImage] = variant.images || [];
-  const name = cleanName(item.name);
+  // A product deleted from the catalogue has no name left
+  const name = cleanName(item.name) || "Unavailable product";
   const inStock = item.inStock;
-  const badge = getProductBadge({ ...item, price: variant.price });
+  const badge = isAvailable ? getProductBadge({ ...item, price: variant.price }) : null;
   const detailPath = productDetailPath(item._id, variant._id);
   const lineItem = { productId: item._id, variantId: variant._id, quantity: 1 };
 
@@ -212,6 +220,21 @@ const ProductCard = ({ item, layout = "grid" }) => {
     stopCardClick(e);
     buyNow(lineItem);
   };
+  // Cart stub until the cart API exists: the item stays in the wishlist (see useCartActions)
+  const handleMove = (e) => {
+    stopCardClick(e);
+    moveToCart(lineItem);
+  };
+  const handleRemove = (e) => {
+    stopCardClick(e);
+    onRemove(item);
+  };
+
+  const heart = isWishlistMode ? (
+    <WishlistHeartButton isWishlisted onClick={() => onRemove(item)} name={name} className={HEART_POSITION} />
+  ) : (
+    <WishlistButton productId={item._id} variantId={variant._id} name={name} className={HEART_POSITION} />
+  );
 
   if (layout === "compact") {
     return (
@@ -250,7 +273,7 @@ const ProductCard = ({ item, layout = "grid" }) => {
             className="aspect-square h-full w-full rounded-2xl"
           />
           <Badge label={badge} />
-          <WishlistButton name={name} />
+          {heart}
         </div>
         <div className="flex flex-col gap-3 p-4 sm:p-6 lg:p-8">
           <span className="w-fit rounded-full bg-[#fff5fa] px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.18em] text-[#d6008a]">
@@ -293,23 +316,41 @@ const ProductCard = ({ item, layout = "grid" }) => {
           hoverImage={hoverImage}
           showHover={hasHovered}
           alt={name}
-          sizes="(min-width: 1280px) 280px, (min-width: 640px) 30vw, 50vw"
-          className="aspect-square w-full rounded-xl"
+          sizes={
+            isWishlistMode
+              ? "(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
+              : "(min-width: 1280px) 280px, (min-width: 640px) 30vw, 50vw"
+          }
+          className={`aspect-square w-full rounded-xl ${isAvailable ? "" : "opacity-50 grayscale"}`}
         />
         <Badge label={badge} />
-        <WishlistButton name={name} />
+        {heart}
       </div>
       <div className="flex flex-1 flex-col gap-1.5 px-1 pb-0.5 pt-3">
-        <SizeChips sizes={item.sizes} />
+        {isAvailable && <SizeChips sizes={item.sizes} />}
         <h3 className="line-clamp-2 min-h-[2.75em] text-[13px] font-semibold leading-snug text-[#1e1a3a] @min-[12rem]:text-[14px]">
-          <CardLink to={detailPath} onIntent={handleIntent} overlayRadius="after:rounded-2xl">
-            {name}
-          </CardLink>
+          {isAvailable ? (
+            <CardLink to={detailPath} onIntent={handleIntent} overlayRadius="after:rounded-2xl">
+              {name}
+            </CardLink>
+          ) : (
+            <span className="text-slate-400">{name}</span>
+          )}
         </h3>
-        <StockNote stock={variant.stock} />
+        {isAvailable && <StockNote stock={variant.stock} />}
         <div className="mt-auto flex flex-col gap-2.5 pt-1">
-          <Price item={item} className="text-[16px] @min-[12rem]:text-[18px]" />
-          <CardActions name={name} inStock={inStock} onAdd={handleAdd} onBuy={handleBuy} />
+          {isAvailable && <Price item={item} className="text-[16px] @min-[12rem]:text-[18px]" />}
+          {isWishlistMode ? (
+            <WishlistActions
+              name={name}
+              isAvailable={isAvailable}
+              inStock={inStock}
+              onMove={handleMove}
+              onRemove={handleRemove}
+            />
+          ) : (
+            <CardActions name={name} inStock={inStock} onAdd={handleAdd} onBuy={handleBuy} />
+          )}
         </div>
       </div>
     </article>
