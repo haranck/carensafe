@@ -15,7 +15,22 @@ function parseRedisPort(rawPort) {
   return port;
 }
 
-const MONGO_URI = (process.env.MONGO_URI || '').trim();
+function parseRedisUrl(rawUrl) {
+  const trimmed = rawUrl ? rawUrl.trim() : '';
+  if (!trimmed) return '';
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error('Invalid REDIS_URL. Expected format: redis://username:password@host:port');
+  }
+  if (parsed.protocol !== 'redis:' && parsed.protocol !== 'rediss:') {
+    throw new Error(`Invalid REDIS_URL protocol "${parsed.protocol}". Must be redis:// or rediss://`);
+  }
+  return trimmed;
+}
+
+const MONGO_URI =(process.env.MONGO_URI || '').trim();
 if (!MONGO_URI) {
   throw new Error('Missing required environment variable: MONGO_URI');
 }
@@ -35,8 +50,7 @@ const env = {
   PORT: parseInt((process.env.PORT || '3000').trim(), 10),
   MONGO_URI,
   FRONTEND_URL: (process.env.FRONTEND_URL || 'http://localhost:5173').trim(),
-  REDIS_HOST: parseRedisHost(process.env.REDIS_HOST),
-  REDIS_PORT: parseRedisPort(process.env.REDIS_PORT),
+  REDIS_URL: parseRedisUrl(process.env.REDIS_URL),
   JWT_ACCESS_SECRET,
   JWT_REFRESH_SECRET,
   JWT_ACCESS_EXPIRES_IN: (process.env.JWT_ACCESS_EXPIRES_IN || '15m').trim(),
