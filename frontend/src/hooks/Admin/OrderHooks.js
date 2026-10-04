@@ -11,7 +11,17 @@ import {
 } from "../../services/Admin/orderService";
 
 // Any admin change refreshes the lists, stats, return requests and the customer's own order views
-const ORDER_PREFIXES = [["admin_orders"], ["admin_order"], ["admin_order_stats"], ["admin_return_items"], ["orders"], ["order"]];
+// (refunds to a customer's wallet included, if that customer is logged in on this browser)
+const ORDER_PREFIXES = [
+    ["admin_orders"],
+    ["admin_order"],
+    ["admin_order_stats"],
+    ["admin_return_items"],
+    ["orders"],
+    ["order"],
+    ["wallet"],
+    ["wallet_transactions"],
+];
 
 // filters: { page, limit, search, orderStatus, paymentStatus, from, to, hasReturnRequest }
 export const useGetAdminOrders = (filters) =>

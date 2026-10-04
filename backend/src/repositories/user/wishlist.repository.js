@@ -29,8 +29,9 @@ class WishlistRepository {
         return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
-    findProductIdsByUser(userId) {
-        return Wishlist.distinct('product', { user: userId });
+    // [{ _id, product, variant }] for the heart states and the header count
+    findKeysByUser(userId) {
+        return Wishlist.find({ user: userId }).select('product variant').lean();
     }
 
     deleteOne(filter) {

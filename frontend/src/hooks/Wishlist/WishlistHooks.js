@@ -25,17 +25,30 @@ const useWishlistSession = () => {
 
 const errorMessage = (error) => getErrorMessage(error, "Couldn't update your wishlist. Please try again.");
 
-// Module-level so React Query keeps the same Set between renders until the data changes
-const toIdSet = (response) => new Set(response.data);
+// Wishlist items are per variant (size). Lookups use "productId:variantId" (product is part of the key because some
+// products share variant ids).
+export const wishlistKeyOf = (productId, variantId) => `${productId}:${variantId}`;
 
-const withId = (ids, productId) => (ids && !ids.data.includes(productId) ? { ...ids, data: [...ids.data, productId] } : ids);
-const withoutId = (ids, productId) => ids && { ...ids, data: ids.data.filter((id) => id !== productId) };
+// Module-level so React Query keeps the same Map between renders until the data changes.
+// Map "productId:variantId" → wishlist item id (null while an add is on its way); `.size` is the item count.
+const toKeyMap = (response) => new Map(response.data.map((entry) => [wishlistKeyOf(entry.productId, entry.variantId), entry.itemId]));
+
+const samePair = (entry, productId, variantId) => entry.productId === productId && entry.variantId === variantId;
+
+const withPair = (ids, { productId, variantId, itemId = null }) =>
+    ids && !ids.data.some((entry) => samePair(entry, productId, variantId))
+        ? { ...ids, data: [...ids.data, { itemId, productId, variantId }] }
+        : ids;
+const withoutPair = (ids, { productId, variantId }) =>
+    ids && { ...ids, data: ids.data.filter((entry) => !samePair(entry, productId, variantId)) };
+const withItemId = (ids, { productId, variantId, itemId }) =>
+    ids && { ...ids, data: ids.data.map((entry) => (samePair(entry, productId, variantId) ? { ...entry, itemId } : entry)) };
 
 // One cached list page without the item; the refetch afterwards fills the page back up
-const withoutItem = (page, productId) =>
+const withoutItem = (page, itemId) =>
     page && {
         ...page,
-        data: page.data.filter((item) => item._id !== productId),
+        data: page.data.filter((item) => item.wishlistItemId !== itemId),
         pagination: { ...page.pagination, total: Math.max(0, page.pagination.total - 1) },
     };
 
@@ -59,7 +72,8 @@ export const useGetWishlist = (page, limit) => {
     });
 };
 
-// Set of wishlisted product ids, for heart states and the header count. Logged out → no request, no data.
+// Map of saved variants ("productId:variantId" → item id) for heart states and the header count (`.size`).
+// Logged out → no request, no data.
 export const useWishlistIds = () => {
     const { isLoggedIn, userId } = useWishlistSession();
     return useQuery({
@@ -67,11 +81,11 @@ export const useWishlistIds = () => {
         queryFn: getWishlistIds,
         enabled: isLoggedIn,
         staleTime: IDS_STALE_TIME,
-        select: toIdSet,
+        select: toKeyMap,
     });
 };
 
-// item: { productId, variantId? }. The heart turns red straight away and rolls back if the server says no.
+// pair: { productId, variantId }. Only that size's heart turns red straight away; rolls back if the server says no.
 export const useAddToWishlist = () => {
     const queryClient = useQueryClient();
     const { userId } = useWishlistSession();
@@ -79,19 +93,23 @@ export const useAddToWishlist = () => {
 
     return useMutation({
         mutationFn: addToWishlist,
-        onMutate: async ({ productId }) => {
+        onMutate: async (pair) => {
             await queryClient.cancelQueries({ queryKey: wishlistIdsKey(userId) });
-            queryClient.setQueryData(wishlistIdsKey(userId), (ids) => withId(ids, productId));
+            queryClient.setQueryData(wishlistIdsKey(userId), (ids) => withPair(ids, pair));
         },
-        onError: (error, { productId }) => {
-            queryClient.setQueryData(wishlistIdsKey(userId), (ids) => withoutId(ids, productId));
-            toast.error(errorMessage(error), { id: `wishlist-error-${productId}` });
+        // The new item id, so the heart can remove it again before the refetch lands
+        onSuccess: (response, pair) =>
+            queryClient.setQueryData(wishlistIdsKey(userId), (ids) => withItemId(ids, { ...pair, itemId: String(response.data.itemId) })),
+        onError: (error, pair) => {
+            queryClient.setQueryData(wishlistIdsKey(userId), (ids) => withoutPair(ids, pair));
+            toast.error(errorMessage(error), { id: `wishlist-error-${wishlistKeyOf(pair.productId, pair.variantId)}` });
         },
         onSettled: invalidateWishlist,
     });
 };
 
-// Removes the id and the item from every cached list page straight away; restores them if the server says no
+// item: { itemId, productId, variantId }. Removes that size from the ids and every cached list page straight away;
+// restores them if the server says no.
 export const useRemoveFromWishlist = () => {
     const queryClient = useQueryClient();
     const { userId } = useWishlistSession();
@@ -99,27 +117,27 @@ export const useRemoveFromWishlist = () => {
 
     return useMutation({
         mutationFn: removeFromWishlist,
-        onMutate: async (productId) => {
+        onMutate: async (item) => {
             await Promise.all([
                 queryClient.cancelQueries({ queryKey: wishlistIdsKey(userId) }),
                 queryClient.cancelQueries({ queryKey: wishlistKey(userId) }),
             ]);
             const previousPages = queryClient.getQueriesData({ queryKey: wishlistKey(userId) });
-            queryClient.setQueryData(wishlistIdsKey(userId), (ids) => withoutId(ids, productId));
-            queryClient.setQueriesData({ queryKey: wishlistKey(userId) }, (page) => withoutItem(page, productId));
+            queryClient.setQueryData(wishlistIdsKey(userId), (ids) => withoutPair(ids, item));
+            queryClient.setQueriesData({ queryKey: wishlistKey(userId) }, (page) => withoutItem(page, item.itemId));
             return { previousPages };
         },
-        onError: (error, productId, context) => {
-            queryClient.setQueryData(wishlistIdsKey(userId), (ids) => withId(ids, productId));
+        onError: (error, item, context) => {
+            queryClient.setQueryData(wishlistIdsKey(userId), (ids) => withPair(ids, item));
             context?.previousPages.forEach(([queryKey, page]) => queryClient.setQueryData(queryKey, page));
-            toast.error(errorMessage(error), { id: `wishlist-error-${productId}` });
+            toast.error(errorMessage(error), { id: `wishlist-error-${item.itemId}` });
         },
         onSettled: invalidateWishlist,
     });
 };
 
 /**
- * Shared heart logic for product cards and the detail page.
+ * Shared heart logic for product cards and the detail page, for ONE variant (size) of a product.
  * Guests go through the login gate (toast + login, then back to this page after logging in).
  */
 export const useWishlistToggle = (productId, variantId) => {
@@ -128,13 +146,16 @@ export const useWishlistToggle = (productId, variantId) => {
     const { mutate: add, isPending: isAdding } = useAddToWishlist();
     const { mutate: remove, isPending: isRemoving } = useRemoveFromWishlist();
 
-    const isWishlisted = Boolean(wishlistIds?.has(productId));
-    const isPending = isAdding || isRemoving;
+    const key = wishlistKeyOf(productId, variantId);
+    const isWishlisted = Boolean(wishlistIds?.has(key));
+    const itemId = wishlistIds?.get(key);
+    // Saved a moment ago and the item id isn't back yet: wait for it before allowing a remove
+    const isPending = isAdding || isRemoving || (isWishlisted && !itemId);
 
     const toggle = () => {
         if (!requireAuth("Log in to save items to your wishlist")) return;
         if (isPending) return;
-        if (isWishlisted) remove(productId);
+        if (isWishlisted) remove({ itemId, productId, variantId });
         else add({ productId, variantId });
     };
 

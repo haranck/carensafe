@@ -3,7 +3,7 @@ const productRepository = require('../../../repositories/user/product.repository
 const userRepository = require('../../../repositories/user/user.repository');
 const orderService = require('../../user/order/order.service');
 const { ORDER_STATUSES, ADMIN_CANCELLABLE_STATUSES, STATUS_TRANSITIONS } = require('../../../config/orders');
-const { readable, recalculatePricing, statusAfterReturns } = require('../../../utils/order');
+const { readable, recalculatePricing, statusAfterReturns, isPaidOnline, paymentStatusAfterRefund } = require('../../../utils/order');
 
 const RETURN_ITEM_STATUSES = ['return_requested', 'return_approved'];
 
@@ -205,7 +205,8 @@ class AdminOrderService {
         return this.getOrder(orderId);
     }
 
-    // The unopened pack came back: restock the variant and add the line to the refundable amount
+    // The unopened pack came back: restock the variant and add the line to the refundable amount. For an online-paid
+    // order the line is refunded to the customer's wallet in the same transaction (COD refunds stay manual).
     async markReturnReceived(orderId, itemId) {
         await orderRepository.runInTransaction(async (session) => {
             const order = await orderRepository.findById(orderId, session);
@@ -214,18 +215,32 @@ class AdminOrderService {
             if (item.status !== 'return_approved') throw httpError('Only approved returns can be marked as received.', 409);
 
             const now = new Date();
-            const items = order.items.map((line) =>
+            let items = order.items.map((line) =>
                 sameId(line._id, itemId) ? { ...line, status: 'returned', return: { ...line.return, receivedAt: now } } : line
             );
             const orderStatus = statusAfterReturns(items);
+            const paidOnline = isPaidOnline(order);
+            let pricing = recalculatePricing(order.pricing, items, { paidOnline });
+            let paymentStatus = order.paymentStatus;
+            const history = [{ status: 'returned', note: `Return received for ${item.name} (restocked)`, by: 'admin', at: now }];
 
             await productRepository.incrementVariantStock(item.product, item.variant, item.quantity, session);
+
+            if (paidOnline) {
+                const refund = await orderService.refundToWallet(order, [item], session);
+                const credited = refund.byItem[String(item._id)];
+                if (credited) items = items.map((line) => (sameId(line._id, itemId) ? { ...line, refund: credited } : line));
+                pricing = { ...pricing, refundedAmount: (order.pricing.refundedAmount || 0) + refund.totalRupees };
+                paymentStatus = paymentStatusAfterRefund(items);
+                if (refund.historyEntry) history.push(refund.historyEntry);
+            }
+
             const saved = await orderRepository.updateIfUnchanged(
                 order._id,
                 order.updatedAt,
                 {
-                    $set: { items, orderStatus, pricing: recalculatePricing(order.pricing, items) },
-                    $push: { statusHistory: { status: 'returned', note: `Return received for ${item.name} (restocked)`, by: 'admin', at: now } }
+                    $set: { items, orderStatus, pricing, paymentStatus },
+                    $push: { statusHistory: { $each: history } }
                 },
                 session
             );

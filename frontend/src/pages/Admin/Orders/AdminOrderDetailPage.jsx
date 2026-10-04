@@ -97,6 +97,7 @@ const AdminOrderDetailPage = () => {
         <div className="flex min-w-0 flex-col gap-5">
           <AdminOrderItems
             items={order.items}
+            paymentMethod={order.paymentMethod}
             onDecide={(item, value) => setDecision({ open: true, item, decision: value })}
             onReceived={handleReceived}
             receivingItemId={markReceived.isPending ? markReceived.variables?.itemId : null}
@@ -172,10 +173,11 @@ const AdminOrderDetailPage = () => {
                 {formatPrice(pricing.total)}
               </Row>
               {pricing.refundableAmount > 0 && (
-                <Row label="To refund (manual for COD)" strong>
+                <Row label={order.paymentMethod === "cod" ? "To refund (manual for COD)" : "Refundable"} strong>
                   {formatPrice(pricing.refundableAmount)}
                 </Row>
               )}
+              {pricing.refundedAmount > 0 && <Row label="Refunded to wallet">{formatPrice(pricing.refundedAmount)}</Row>}
             </dl>
             {order.deliveredAt && <p className="mt-3 text-[12.5px] text-slate-500">Delivered {formatDateTime(order.deliveredAt)}</p>}
           </section>

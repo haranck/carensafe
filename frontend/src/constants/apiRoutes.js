@@ -34,8 +34,8 @@ export const API_ROUTES = {
         LIST: "/user/wishlist",
         IDS: "/user/wishlist/ids",
         ADD: "/user/wishlist",
-        REMOVE: (productId) => `/user/wishlist/${productId}`,
-        MOVE_TO_CART: (productId) => `/user/wishlist/${productId}/move-to-cart`,
+        REMOVE: (itemId) => `/user/wishlist/items/${itemId}`,
+        MOVE_TO_CART: (itemId) => `/user/wishlist/items/${itemId}/move-to-cart`,
     },
     CART: {
         GET: "/user/cart",
@@ -56,8 +56,14 @@ export const API_ROUTES = {
         RETURN: (id) => `/user/orders/${id}/return`,
         RETURN_ITEM: (id, itemId) => `/user/orders/${id}/items/${itemId}/return`,
     },
+    WALLET: {
+        GET: "/user/wallet",
+        TRANSACTIONS: "/user/wallet/transactions",
+    },
     ADMIN_AUTH: {
         LOGIN: "/admin/auth/login",
+        REFRESH: "/admin/auth/refresh",
+        LOGOUT: "/admin/auth/logout",
     },
     ADMIN_USERS: {
         GET_ALL: "/admin/users",

@@ -23,15 +23,13 @@ export const NAV_LINKS = [
   { label: "Contact", to: FRONTEND_ROUTES.CONTACT },
 ];
 
-// TODO: replace with the real balance once a wallet API exists
-const WALLET_BALANCE_LABEL = "₹0";
-
 export const ACCOUNT_LINKS = [
   { label: "My Profile", icon: User, to: FRONTEND_ROUTES.PROFILE_EDIT },
   { label: "My Orders", icon: Package, to: FRONTEND_ROUTES.ORDERS },
   { label: "Wishlist", icon: Heart, to: FRONTEND_ROUTES.WISHLIST },
   { label: "Rewards", icon: Gift, to: FRONTEND_ROUTES.REWARDS },
-  { label: "Wallet", icon: Wallet, to: FRONTEND_ROUTES.WALLET, meta: WALLET_BALANCE_LABEL },
+  // Shows the live wallet balance (useWalletBalance) next to the label
+  { label: "Wallet", icon: Wallet, to: FRONTEND_ROUTES.WALLET, showsWalletBalance: true },
 ];
 
 export const resolveNavPath = (link, isLoggedIn) => (isLoggedIn && link.authTo) || link.to;

@@ -4,19 +4,16 @@ const wishlistController = require('../../../controllers/user/wishlist/wishlist.
 const authMiddleware = require('../../../middlewares/auth.middleware');
 const {
     validateAddToWishlist,
-    validateWishlistProductId,
-    validateWishlistQuery,
-    validateMoveToCart
+    validateWishlistItemId,
+    validateWishlistQuery
 } = require('../../../middlewares/wishlist.validation');
 
-// Every wishlist endpoint belongs to the logged-in user (req.user.userId)
+// Every wishlist endpoint belongs to the logged-in user (req.user.userId). Items are per variant (size).
 router.get('/', authMiddleware, validateWishlistQuery, (req, res) => wishlistController.getWishlist(req, res));
 router.get('/ids', authMiddleware, (req, res) => wishlistController.getWishlistIds(req, res));
 router.post('/', authMiddleware, validateAddToWishlist, (req, res) => wishlistController.addToWishlist(req, res));
-router.delete('/:productId', authMiddleware, validateWishlistProductId, (req, res) =>
-    wishlistController.removeFromWishlist(req, res)
-);
-router.post('/:productId/move-to-cart', authMiddleware, validateWishlistProductId, validateMoveToCart, (req, res) =>
+router.delete('/items/:itemId', authMiddleware, validateWishlistItemId, (req, res) => wishlistController.removeItem(req, res));
+router.post('/items/:itemId/move-to-cart', authMiddleware, validateWishlistItemId, (req, res) =>
     wishlistController.moveToCart(req, res)
 );
 

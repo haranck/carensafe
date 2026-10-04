@@ -40,7 +40,7 @@ app.js mount → routes → middlewares → controller → service → repositor
 ```
 
 Mounted in `src/app.js`: `/api/user/auth`, `/api/user/products`, `/api/user/wishlist`, `/api/user/cart`,
-`/api/user/profile` (the `user/user` route/controller/service files), `/api/user/addresses`, `/api/user/orders`,
+`/api/user/profile` (the `user/user` route/controller/service files), `/api/user/addresses`, `/api/user/orders`, `/api/user/wallet`,
 `/api/admin/auth`, `/api/admin/users`, `/api/admin/products`, `/api/admin/orders`.
 `globalErrorHandler` is registered last.
 
@@ -132,8 +132,16 @@ forwards rejected promises). Same JSON shape. Keep the controller try/catch patt
 - `middlewares/auth.middleware.js` (default export) expects `Authorization: Bearer <token>`, verifies it and sets
   **`req.user = { userId }`**. 401 `{ success:false, message }` otherwise. On every request it also calls
   `authService.verifyActiveUser`: deleted user → 401 "User no longer exists.", blocked → 403 "Your account is blocked."
-  (same text as login/refresh and `USER_ERRORS.USER_BLOCKED`). It does **not** check `isAdmin`. Used by the wishlist and
-  cart routes. Protect new user routes with it: `router.get('/', authMiddleware, (req, res) => ...)` and read `req.user.userId`.
+  (same text as login/refresh and `USER_ERRORS.USER_BLOCKED`), admin account → 403 "Admins are not allowed to log in from
+  the user portal." (admin tokens only work on `/api/admin/*`; customer refresh refuses admins too). Used by every
+  customer route that needs a login. Protect new user routes with it: `router.get('/', authMiddleware, (req, res) => ...)` and read `req.user.userId`.
+- **Admin session** (separate from customers): `POST /api/admin/auth/login` returns `{ user, accessToken }` and sets an
+  httpOnly `adminRefreshToken` cookie scoped to `path: /api/admin/auth`; `/refresh` rotates it (old token blacklisted),
+  `/logout` revokes it. `middlewares/adminAuth.middleware.js` guards every other `/api/admin/*` route (`router.use` at the
+  top of each admin route file, so it runs before uploads/validation) and reads `isAdmin`/`isBlocked` from the DB on every
+  request (401 / 403 "Admin access required."). Frontend: `adminSession` Redux slice, `routes/AdminRoute.jsx` guard,
+  `api/axios.js` sends the admin token for `/admin/...` URLs and refreshes via the admin endpoint (one shared refresh per
+  session). Refresh tokens carry a random `jti` so two issued in the same second differ.
 - Signup is a two-step OTP flow. Pending signup data lives in Redis `signup:<email>` (300s) with
   `otp_attempts:<email>` (max 3). The user is created only in `verifyOtp`.
 
@@ -314,10 +322,6 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 ## Known issues (as of 2026-10-03)
 
 **Security**
-- **Admin API is unauthenticated**: `/api/admin/users`, `/api/admin/products` and `/api/admin/orders` (customer names,
-  phones, addresses, status changes) have no middleware;
-  `authMiddleware` is never mounted; there's no admin-role check (the JWT has no `isAdmin`). Admin login
-  (`admin.auth.service`) returns no token, and `AdminLoginForm` just navigates. `/admin/*` frontend routes have no guard.
 - Global rate limiter is commented out in `app.js`; login/OTP endpoints are unthrottled.
 - OTP brute-force guard is weak: a wrong attempt resets `otp_attempts:<email>` TTL to 30s while the signup key lives 300s.
 - `frontend/.env` is tracked in git (`frontend/.gitignore` doesn't ignore `.env`).
@@ -333,8 +337,6 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - `ProductModal.jsx` calls hooks after an early `return null` (rules-of-hooks) and imports via `'../../../src/hooks/...'`.
 - `AdminProductsPage` calls `toast.error` during render. `keepPreviousData: true` in `AdminHooks.js` is ignored (v5).
 - `AdminDashboardPage` uses dynamic Tailwind classes (`bg-${statusColor}-50`) and hardcoded mock stats/orders.
-- Admin login (`admin.auth.service`) still calls `bcrypt.compare` for users without a password → 500 instead of 401
-  (user login now answers 400 "This account uses Google sign-in...").
 - Cloudinary uploads happen before controller validation; rejected requests and removed variant images are never
   deleted (orphans).
 
@@ -343,16 +345,24 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
   in `utils/order.js`, logic in `services/user/order/order.service.js` (placing: one transaction for stock + order + cart
   clear; cancel / return per item) and `services/admin/order/admin.order.service.js`. Customer responses carry
   `canCancel` / `canReturn` flags so the UI never re-implements the rules. COD refunds are manual (`pricing.refundableAmount`);
-  the `razorpay` fields and `paymentMethod: 'razorpay'` are reserved for the online-payment step. There is no wallet backend
-  (the Wallet tab shows ₹0.00).
-- Some products share variant `_id`s (duplicated product documents). Orders and stock use product + variant together; the
-  cart's one-line-per-variant check does not.
+  the `razorpay` fields and `paymentMethod: 'razorpay'` are reserved for the online-payment step.
+- Wallet (`services/user/wallet/wallet.service.js`): money in integer **paise** (orders stay in rupees; convert with
+  `toPaise`). Read-only API (`GET /api/user/wallet`, `/transactions`); only server code credits it. `credit`/`debit` are
+  idempotent via a unique `idempotencyKey` (`refund:<orderId>:<itemId>`) and join the caller's transaction. Online-paid
+  orders (`isPaidOnline`) refund received returns and cancelled lines to the wallet (`refundForItemPaise`, item `refund`,
+  `pricing.refundedAmount`, payment status `partially_refunded`/`refunded`); COD orders never do. No order can be paid
+  online yet (Razorpay isn't integrated), so wallet credits only happen once it is. "Add money" has no endpoint.
+- Some products share variant `_id`s (duplicated product documents). Orders, stock and the wishlist use product + variant
+  together; the cart's one-line-per-variant check does not.
+- The wishlist is per VARIANT (unique `{ user, product, variant }`; `scripts/migrate-wishlist-variants.js [--dry-run]`
+  dropped the old `{ user, product }` index). `/ids` returns `[{ itemId, productId, variantId }]`; remove / move-to-cart use
+  the item id (`/items/:itemId`). Frontend `useWishlistIds` is a Map keyed `wishlistKeyOf(productId, variantId)`.
 - Addresses can carry an optional map pin: `location` GeoJSON Point **[lng, lat]** (2dsphere index, Joi rejects points
   outside India) + `formattedAddress`. The address form's map (`components/Address/LocationPicker.jsx`, lazy `mapbox-gl`)
   and reverse geocoding need `VITE_MAPBOX_ACCESS_TOKEN`; without it the location section is hidden. Pincodes are checked
   against India Post (`constants/externalApis.js`), failing open when it's down.
 - `repositories/admin/` is empty; admin services use `repositories/user/*`. `repositories/user/auth/auth.repository.js`
-  duplicates `user.repository.js` and is used only by `admin.auth.service.js`. `AuthService.adminLogin` is dead code
+  duplicates `user.repository.js` and is no longer used anywhere. `AuthService.adminLogin` is dead code
   duplicating `AdminAuthService.adminLogin`.
 - Joi covers only signup/login. Verify-OTP, resend-OTP and all admin endpoints validate ad hoc (some in controllers).
 - `utils/email.js` reads `process.env` directly. There's no `.env.example` in either app.

@@ -30,19 +30,41 @@ const itemTitle = (name = '', variantName = '') => {
  * `total` is what the order costs (COD collects it on delivery); returned lines don't change it, they are added to
  * `refundableAmount` (refunded manually for COD until Razorpay refunds exist).
  */
-const recalculatePricing = (pricing, items) => {
+const recalculatePricing = (pricing, items, { paidOnline = false } = {}) => {
     const kept = items.filter((item) => item.status !== 'cancelled');
     const subtotal = sum(kept.map((item) => item.lineTotal));
     const discount = Math.min(pricing.discount || 0, subtotal);
     const shipping = kept.length === 0 ? 0 : pricing.shipping || 0;
+    // Online-paid orders also owe back what was cancelled after paying; COD cancellations were never paid
+    const owed = items.filter((item) => item.status === 'returned' || (paidOnline && item.status === 'cancelled'));
     return {
         subtotal,
         discount,
         shipping,
         total: Math.max(0, subtotal - discount + shipping),
-        refundableAmount: sum(items.filter((item) => item.status === 'returned').map((item) => item.lineTotal))
+        refundableAmount: sum(owed.map((item) => item.lineTotal)),
+        refundedAmount: pricing.refundedAmount || 0
     };
 };
+
+// Paid online (Razorpay) and not fully refunded yet: refunds go to the wallet. COD orders never do.
+const isPaidOnline = (order) => order.paymentMethod === 'razorpay' && ['paid', 'partially_refunded'].includes(order.paymentStatus);
+
+const toPaise = (rupees) => Math.round(rupees * 100);
+
+/**
+ * What one line refunds, in PAISE: its line total minus its share of the order discount (shared in proportion to the
+ * line totals of the whole order as placed). The single place this formula lives.
+ */
+const refundForItemPaise = (order, item) => {
+    const orderSubtotal = sum(order.items.map((line) => line.lineTotal));
+    const discountShare = orderSubtotal > 0 ? ((order.pricing.discount || 0) * item.lineTotal) / orderSubtotal : 0;
+    return toPaise(Math.max(0, item.lineTotal - discountShare));
+};
+
+// After a refund: fully refunded once nothing is left that was kept (every line cancelled or returned)
+const paymentStatusAfterRefund = (items) =>
+    items.every((item) => item.status === 'cancelled' || item.status === 'returned') ? 'refunded' : 'partially_refunded';
 
 // Order status once returns move: a return still open → return_requested; else returned / partially_returned /
 // back to delivered (every request rejected)
@@ -54,4 +76,14 @@ const statusAfterReturns = (items) => {
     return returned === live.length ? 'returned' : 'partially_returned';
 };
 
-module.exports = { readable, REASON_LABELS, itemTitle, recalculatePricing, statusAfterReturns };
+module.exports = {
+    readable,
+    REASON_LABELS,
+    itemTitle,
+    recalculatePricing,
+    statusAfterReturns,
+    isPaidOnline,
+    toPaise,
+    refundForItemPaise,
+    paymentStatusAfterRefund
+};

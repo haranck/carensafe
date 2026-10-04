@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import AdminLoginPage from "../../pages/Admin/Auth/AdminLoginPage";
 import AdminDashboardLayout from "../../components/Layout/Admin/AdminDashboardLayout";
+import AdminRoute from "../AdminRoute";
 import AdminDashboardPage from "../../pages/Admin/Dashboard/AdminDashboardPage";
 import AdminUsersPage from "../../pages/Admin/Users/AdminUsersPage";
 import AdminProductsPage from "../../pages/Admin/Products/AdminProductsPage";
@@ -30,20 +31,24 @@ const withLoader = (page) => <Suspense fallback={<AdminPageLoader />}>{page}</Su
 const AdminRoutes = () => {
   return (
     <Routes>
-      {/* Login Route */}
-      <Route path={toRelative(FRONTEND_ROUTES.ADMIN_LOGIN)} element={<AdminLoginPage />} />
+      {/* Login: only without an admin session */}
+      <Route element={<AdminRoute guestOnly />}>
+        <Route path={toRelative(FRONTEND_ROUTES.ADMIN_LOGIN)} element={<AdminLoginPage />} />
+      </Route>
 
-      {/* Dashboard Routes wrapped in Layout */}
-      <Route element={<AdminDashboardLayout />}>
-        <Route path={toRelative(FRONTEND_ROUTES.ADMIN_DASHBOARD)} element={<AdminDashboardPage />} />
-        <Route path={toRelative(FRONTEND_ROUTES.ADMIN_USERS)} element={<AdminUsersPage />} />
-        <Route path={toRelative(FRONTEND_ROUTES.ADMIN_PRODUCTS)} element={<AdminProductsPage />} />
-        <Route path={toRelative(FRONTEND_ROUTES.ADMIN_ADD_PRODUCTS)} element={<AdminAddProductPage />} />
-        <Route path={toRelative(FRONTEND_ROUTES.ADMIN_ORDERS)} element={withLoader(<AdminOrdersPage />)} />
-        <Route path={toRelative(FRONTEND_ROUTES.ADMIN_ORDER_DETAIL)} element={withLoader(<AdminOrderDetailPage />)} />
-        <Route path={toRelative(FRONTEND_ROUTES.ADMIN_RETURNS)} element={withLoader(<AdminReturnsPage />)} />
-        <Route path={toRelative(FRONTEND_ROUTES.ADMIN_SALES_REPORTS)} element={<AdminSalesReportsPage />} />
-        <Route path={toRelative(FRONTEND_ROUTES.ADMIN_EARNINGS)} element={<AdminEarningsPage />} />
+      {/* Every admin page needs an admin session */}
+      <Route element={<AdminRoute />}>
+        <Route element={<AdminDashboardLayout />}>
+          <Route path={toRelative(FRONTEND_ROUTES.ADMIN_DASHBOARD)} element={<AdminDashboardPage />} />
+          <Route path={toRelative(FRONTEND_ROUTES.ADMIN_USERS)} element={<AdminUsersPage />} />
+          <Route path={toRelative(FRONTEND_ROUTES.ADMIN_PRODUCTS)} element={<AdminProductsPage />} />
+          <Route path={toRelative(FRONTEND_ROUTES.ADMIN_ADD_PRODUCTS)} element={<AdminAddProductPage />} />
+          <Route path={toRelative(FRONTEND_ROUTES.ADMIN_ORDERS)} element={withLoader(<AdminOrdersPage />)} />
+          <Route path={toRelative(FRONTEND_ROUTES.ADMIN_ORDER_DETAIL)} element={withLoader(<AdminOrderDetailPage />)} />
+          <Route path={toRelative(FRONTEND_ROUTES.ADMIN_RETURNS)} element={withLoader(<AdminReturnsPage />)} />
+          <Route path={toRelative(FRONTEND_ROUTES.ADMIN_SALES_REPORTS)} element={<AdminSalesReportsPage />} />
+          <Route path={toRelative(FRONTEND_ROUTES.ADMIN_EARNINGS)} element={<AdminEarningsPage />} />
+        </Route>
       </Route>
     </Routes>
   );

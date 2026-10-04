@@ -10,7 +10,17 @@ const useSession = () => {
 };
 
 // A changed order refreshes its detail and every list (and the admin views, if open in this browser)
-const ORDER_PREFIXES = [["orders"], ["order"], ["admin_orders"], ["admin_order"], ["admin_order_stats"], ["admin_return_items"]];
+// Cancelling an online-paid order refunds to the wallet, so the wallet refreshes too
+const ORDER_PREFIXES = [
+    ["orders"],
+    ["order"],
+    ["admin_orders"],
+    ["admin_order"],
+    ["admin_order_stats"],
+    ["admin_return_items"],
+    ["wallet"],
+    ["wallet_transactions"],
+];
 const CART_PREFIXES = [["cart"], ["cart_count"], ["cart_recommendations"]];
 
 const useInvalidate = (prefixes) => {

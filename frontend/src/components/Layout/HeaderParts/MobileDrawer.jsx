@@ -11,12 +11,15 @@ import {
   resolveNavPath,
 } from "./navConfig";
 import UserAvatar from "../../common/UserAvatar";
+import { useWalletBalance } from "../../../hooks/Wallet/WalletHooks";
+import { formatPaise } from "../../../utils/wallet";
 
 const SectionTitle = ({ children }) => (
   <p className="px-3 mb-1.5 text-[10.5px] font-bold uppercase tracking-widest text-slate-400">{children}</p>
 );
 
 const MobileDrawer = ({ id, isLoggedIn, user, onClose, onLogout }) => {
+  const { data: walletBalance } = useWalletBalance();
   const [query, setQuery] = useState("");
   const closeButtonRef = useRef(null);
   const navigate = useNavigate();
@@ -142,7 +145,7 @@ const MobileDrawer = ({ id, isLoggedIn, user, onClose, onLogout }) => {
             <div>
               <SectionTitle>My Account</SectionTitle>
               <ul className="flex flex-col gap-0.5">
-                {ACCOUNT_LINKS.map(({ label, icon: Icon, to, meta }) => (
+                {ACCOUNT_LINKS.map(({ label, icon: Icon, to, showsWalletBalance }) => (
                   <li key={label}>
                     <Link
                       to={to}
@@ -151,7 +154,9 @@ const MobileDrawer = ({ id, isLoggedIn, user, onClose, onLogout }) => {
                     >
                       <Icon size={17} aria-hidden="true" className="text-[#7c3aed]" />
                       <span className="flex-1">{label}</span>
-                      {meta && <span className="text-[13px] font-bold text-[#d6008a]">{meta}</span>}
+                      {showsWalletBalance && walletBalance !== undefined && (
+                      <span className="text-[13px] font-bold text-[#d6008a]">{formatPaise(walletBalance)}</span>
+                    )}
                     </Link>
                   </li>
                 ))}

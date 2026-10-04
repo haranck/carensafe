@@ -50,7 +50,8 @@ export const WishlistHeartButton = ({ isWishlisted, onClick, disabled = false, n
   );
 };
 
-// Heart wired to the wishlist API (optimistic; logged-out users are sent to login)
+// Heart for ONE variant (size) of a product, wired to the wishlist API (optimistic; logged-out users are sent to
+// login). `variantId` is required: each size is saved separately.
 const WishlistButton = ({ productId, variantId, name, size, className }) => {
   const { isWishlisted, toggle, isPending } = useWishlistToggle(productId, variantId);
 

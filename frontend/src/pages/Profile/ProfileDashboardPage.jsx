@@ -12,10 +12,12 @@ import { useGetMyOrders } from "../../hooks/Order/OrderHooks";
 import { useGetAddresses } from "../../hooks/Address/AddressHooks";
 import { useWishlistIds } from "../../hooks/Wishlist/WishlistHooks";
 import { useCartCount } from "../../hooks/Cart/CartHooks";
+import { useWalletBalance } from "../../hooks/Wallet/WalletHooks";
 import { FRONTEND_ROUTES, orderDetailPath } from "../../constants/frontendRoutes";
 import { BRAND_GRADIENT, FOCUS_RING } from "../../constants/customerTheme";
 import { formatPrice } from "../../utils/product";
 import { formatDate, formatMonthYear } from "../../utils/date";
+import { formatPaise } from "../../utils/wallet";
 
 const PANEL_LINK = `inline-flex min-h-10 items-center gap-1 rounded-full px-2 text-[13px] font-bold text-[#d6008a] hover:text-[#9d0063] ${FOCUS_RING}`;
 
@@ -112,6 +114,7 @@ const ProfileDashboardPage = () => {
   const { data: addressesData, isLoading: isLoadingAddresses } = useGetAddresses();
   const { data: wishlistIds } = useWishlistIds();
   const { data: cartCount = 0 } = useCartCount();
+  const { data: walletBalance = 0 } = useWalletBalance();
 
   const profile = profileData?.data;
   const latestOrder = ordersData?.data?.[0];
@@ -143,8 +146,7 @@ const ProfileDashboardPage = () => {
         <StatTile icon={Package} label="Orders" value={orderCount} to={FRONTEND_ROUTES.ORDERS} />
         <StatTile icon={Heart} label="Wishlist items" value={wishlistIds?.size || 0} to={FRONTEND_ROUTES.WISHLIST} />
         <StatTile icon={ShoppingBag} label="Cart items" value={cartCount} to={FRONTEND_ROUTES.CART} />
-        {/* No wallet API yet: always ₹0 */}
-        <StatTile icon={Wallet} label="Wallet balance" value={formatPrice(0)} to={FRONTEND_ROUTES.WALLET} />
+        <StatTile icon={Wallet} label="Wallet balance" value={formatPaise(walletBalance)} to={FRONTEND_ROUTES.WALLET} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">

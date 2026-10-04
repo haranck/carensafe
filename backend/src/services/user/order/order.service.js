@@ -3,6 +3,7 @@ const productRepository = require('../../../repositories/user/product.repository
 const cartRepository = require('../../../repositories/user/cart.repository');
 const addressRepository = require('../../../repositories/user/address.repository');
 const cartService = require('../cart/cart.service');
+const walletService = require('../wallet/wallet.service');
 const {
     RETURN_WINDOW_DAYS,
     USER_CANCELLABLE_STATUSES,
@@ -10,7 +11,17 @@ const {
     STATUS_GROUPS
 } = require('../../../config/orders');
 
-const { readable, REASON_LABELS, itemTitle, recalculatePricing, statusAfterReturns } = require('../../../utils/order');
+const {
+    readable,
+    REASON_LABELS,
+    itemTitle,
+    recalculatePricing,
+    statusAfterReturns,
+    isPaidOnline,
+    toPaise,
+    refundForItemPaise,
+    paymentStatusAfterRefund
+} = require('../../../utils/order');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ORDER_NUMBER_ATTEMPTS = 5;
@@ -222,9 +233,23 @@ class OrderService {
             const isFullyCancelled = items.every((item) => item.status === 'cancelled');
             const orderStatus = isFullyCancelled ? 'cancelled' : 'partially_cancelled';
             const what = itemId ? `Cancelled ${targets[0].name}` : 'Order cancelled';
+            const history = [{ status: orderStatus, note: `${what} (${REASON_LABELS[reason]})${note ? `: ${note}` : ''}`, by, at: now }];
 
             for (const item of targets) {
                 await productRepository.incrementVariantStock(item.product, item.variant, item.quantity, session);
+            }
+
+            // Paid online → the cancelled lines (and the shipping, once nothing is left) go back to the wallet
+            const paidOnline = isPaidOnline(order);
+            let pricing = recalculatePricing(order.pricing, items, { paidOnline });
+            let finalItems = items;
+            let paymentStatus = order.paymentStatus;
+            if (paidOnline) {
+                const refund = await this.refundToWallet(order, targets, session, { includeShipping: isFullyCancelled });
+                finalItems = items.map((item) => (refund.byItem[String(item._id)] ? { ...item, refund: refund.byItem[String(item._id)] } : item));
+                pricing = { ...pricing, refundedAmount: (order.pricing.refundedAmount || 0) + refund.totalRupees };
+                paymentStatus = paymentStatusAfterRefund(finalItems);
+                if (refund.historyEntry) history.push(refund.historyEntry);
             }
 
             const saved = await orderRepository.updateIfUnchanged(
@@ -232,18 +257,75 @@ class OrderService {
                 order.updatedAt,
                 {
                     $set: {
-                        items,
+                        items: finalItems,
                         orderStatus,
-                        pricing: recalculatePricing(order.pricing, items),
+                        pricing,
+                        paymentStatus,
                         ...(isFullyCancelled && { cancelledAt: now })
                     },
-                    $push: { statusHistory: { status: orderStatus, note: `${what} (${REASON_LABELS[reason]})${note ? `: ${note}` : ''}`, by, at: now } }
+                    $push: { statusHistory: { $each: history } }
                 },
                 session
             );
             if (!saved) throw changedMeanwhile();
             return saved;
         });
+    }
+
+    /**
+     * Credits the wallet for `targets` of an online-paid order, inside the caller's transaction. One wallet transaction per
+     * line (key `refund:<orderId>:<itemId>`, so a line is never refunded twice), plus the shipping charge when asked.
+     * Returns { byItem: { [itemId]: { amount (paise), creditedAt, walletTransaction } }, totalRupees, historyEntry }.
+     */
+    async refundToWallet(order, targets, session, { includeShipping = false } = {}) {
+        const now = new Date();
+        const byItem = {};
+        let totalPaise = 0;
+
+        for (const item of targets) {
+            const amountPaise = refundForItemPaise(order, item);
+            if (amountPaise <= 0) continue;
+            const { transaction, alreadyApplied } = await walletService.credit(
+                {
+                    userId: order.user,
+                    amountPaise,
+                    source: 'refund',
+                    orderId: order._id,
+                    itemId: item._id,
+                    description: `Refund for ${item.name}${item.size ? ` (${item.size})` : ''} · ${order.orderNumber}`,
+                    idempotencyKey: `refund:${order._id}:${item._id}`
+                },
+                session
+            );
+            byItem[String(item._id)] = { amount: transaction.amount, creditedAt: transaction.createdAt || now, walletTransaction: transaction._id };
+            if (!alreadyApplied) totalPaise += transaction.amount;
+        }
+
+        const shippingPaise = includeShipping ? toPaise(order.pricing.shipping || 0) : 0;
+        if (shippingPaise > 0) {
+            const { transaction, alreadyApplied } = await walletService.credit(
+                {
+                    userId: order.user,
+                    amountPaise: shippingPaise,
+                    source: 'refund',
+                    orderId: order._id,
+                    description: `Shipping refund · ${order.orderNumber}`,
+                    idempotencyKey: `refund:${order._id}:shipping`
+                },
+                session
+            );
+            if (!alreadyApplied) totalPaise += transaction.amount;
+        }
+
+        const totalRupees = totalPaise / 100;
+        return {
+            byItem,
+            totalRupees,
+            historyEntry:
+                totalPaise > 0
+                    ? { status: 'refunded', note: `₹${totalRupees.toLocaleString('en-IN')} refunded to wallet`, by: 'system', at: now }
+                    : null
+        };
     }
 
     // One item (itemId) or every active item. Only size mismatch, only unopened packs, only within the window.

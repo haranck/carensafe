@@ -167,6 +167,12 @@ const StockNote = ({ stock }) =>
     <p className="text-[11.5px] font-semibold text-rose-500">Only {stock} left</p>
   ) : null;
 
+// Wishlist cards: the saved size, e.g. "Size XL · 10 pieces"
+const SavedVariant = ({ variant }) => {
+  const text = [variant.size && `Size ${variant.size}`, variant.pieces && `${variant.pieces} pieces`].filter(Boolean).join(" · ");
+  return text ? <p className="text-[12px] font-bold text-[#3b2a8a]">{text}</p> : null;
+};
+
 const SizeChips = ({ sizes }) =>
   sizes?.length ? (
     <ul aria-label="Available sizes" className="flex flex-wrap gap-1">
@@ -189,7 +195,8 @@ const Price = ({ item, className = "text-[18px]" }) => (
 /**
  * Storefront product card (one item = one product from GET /user/products, with its default variant).
  * layout: "grid" (default), "compact" (horizontal row) or "feature" (wide combo card).
- * mode "wishlist" (grid only, items from GET /user/wishlist): filled heart and Remove both call `onRemove(item)`,
+ * mode "wishlist" (grid only, items from GET /user/wishlist, one per saved variant): filled heart and Remove both call
+ * `onRemove(item)`,
  * Move to Cart replaces Add / Buy, and `isAvailable: false` items are greyed out with only Remove.
  */
 const ProductCard = ({ item, layout = "grid", mode = "shop", onRemove }) => {
@@ -220,10 +227,10 @@ const ProductCard = ({ item, layout = "grid", mode = "shop", onRemove }) => {
     stopCardClick(e);
     buyNow(lineItem);
   };
-  // Adds one to the cart, then removes it from the wishlist (see useCartActions)
+  // Adds one of this saved size to the cart, then removes only this wishlist item (see useCartActions)
   const handleMove = (e) => {
     stopCardClick(e);
-    moveToCart(lineItem);
+    moveToCart({ ...lineItem, wishlistItemId: item.wishlistItemId });
   };
   const handleRemove = (e) => {
     stopCardClick(e);
@@ -327,7 +334,7 @@ const ProductCard = ({ item, layout = "grid", mode = "shop", onRemove }) => {
         {heart}
       </div>
       <div className="flex flex-1 flex-col gap-1.5 px-1 pb-0.5 pt-3">
-        {isAvailable && <SizeChips sizes={item.sizes} />}
+        {isWishlistMode ? <SavedVariant variant={variant} /> : isAvailable && <SizeChips sizes={item.sizes} />}
         <h3 className="line-clamp-2 min-h-[2.75em] text-[13px] font-semibold leading-snug text-[#1e1a3a] @min-[12rem]:text-[14px]">
           {isAvailable ? (
             <CardLink to={detailPath} onIntent={handleIntent} overlayRadius="after:rounded-2xl">

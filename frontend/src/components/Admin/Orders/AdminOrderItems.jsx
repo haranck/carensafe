@@ -4,20 +4,38 @@ import { ItemStatusPill } from "../../Order/OrderPills";
 import { formatPrice } from "../../../utils/product";
 import { formatDate } from "../../../utils/date";
 import { cancelReasonLabel } from "../../../utils/order";
+import { formatPaise } from "../../../utils/wallet";
 import { ADMIN_CARD } from "./adminOrderStyles";
 
 const SMALL_BUTTON = "inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-[12px] font-bold transition-colors disabled:opacity-50";
 
+// Refund status for a cancelled / returned line: wallet credit (online) or manual (COD)
+const RefundStatus = ({ item, paymentMethod }) => {
+  if (item.refund?.amount) {
+    return (
+      <p className="font-semibold text-emerald-700">
+        Refunded {formatPaise(item.refund.amount)} to wallet · {formatDate(item.refund.creditedAt)}
+        <span className="block font-mono text-[11px] font-normal text-slate-400">Txn {item.refund.walletTransaction}</span>
+      </p>
+    );
+  }
+  if (item.status === "returned" && paymentMethod === "cod") return <p className="font-semibold text-amber-700">COD: refund {formatPrice(item.lineTotal)} manually</p>;
+  return null;
+};
+
 // Cancellation / return details for one line
-const ItemNotes = ({ item }) => {
+const ItemNotes = ({ item, paymentMethod }) => {
   const { cancellation, return: ret } = item;
   if (item.status === "cancelled" && cancellation) {
     return (
-      <p className="mt-1 text-[12px] text-slate-500">
-        Cancelled by {cancellation.cancelledBy === "admin" ? "admin" : "customer"} on {formatDate(cancellation.at)} ·{" "}
-        {cancelReasonLabel(cancellation.reason)}
-        {cancellation.note && ` · “${cancellation.note}”`}
-      </p>
+      <div className="mt-1 flex flex-col gap-0.5 text-[12px] text-slate-500">
+        <p>
+          Cancelled by {cancellation.cancelledBy === "admin" ? "admin" : "customer"} on {formatDate(cancellation.at)} ·{" "}
+          {cancelReasonLabel(cancellation.reason)}
+          {cancellation.note && ` · “${cancellation.note}”`}
+        </p>
+        <RefundStatus item={item} paymentMethod={paymentMethod} />
+      </div>
     );
   }
   if (!ret?.requestedAt) return null;
@@ -34,12 +52,13 @@ const ItemNotes = ({ item }) => {
         </p>
       )}
       {ret.receivedAt && <p className="text-slate-700">Received {formatDate(ret.receivedAt)} · restocked</p>}
+      <RefundStatus item={item} paymentMethod={paymentMethod} />
     </div>
   );
 };
 
 /** Items with their status and return actions: Approve / Reject a request, Mark as received once approved. */
-const AdminOrderItems = ({ items, onDecide, onReceived, receivingItemId }) => (
+const AdminOrderItems = ({ items, paymentMethod, onDecide, onReceived, receivingItemId }) => (
   <section className={`${ADMIN_CARD} overflow-hidden`}>
     <h2 className="px-5 pt-5 text-[16px] font-bold text-slate-800">Items</h2>
     <div className="mt-3 overflow-x-auto">
@@ -64,7 +83,7 @@ const AdminOrderItems = ({ items, onDecide, onReceived, receivingItemId }) => (
                     <div className="mt-1">
                       <ItemStatusPill status={item.status} />
                     </div>
-                    <ItemNotes item={item} />
+                    <ItemNotes item={item} paymentMethod={paymentMethod} />
                   </div>
                 </div>
               </td>

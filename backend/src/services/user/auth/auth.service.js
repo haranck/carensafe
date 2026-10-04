@@ -354,6 +354,12 @@ class AuthService {
             error.statusCode = 403;
             throw error;
         }
+        // An admin's refresh token can't open a customer session (admins refresh through /api/admin/auth/refresh)
+        if (user.isAdmin) {
+            const error = new Error('Admins are not allowed to log in from the user portal.');
+            error.statusCode = 403;
+            throw error;
+        }
 
         const currentTime = Math.floor(Date.now() / 1000);
         const expiresInSeconds = decoded.exp - currentTime;
@@ -456,6 +462,13 @@ class AuthService {
 
         if (user.isBlocked) {
             const error = new Error('Your account is blocked.');
+            error.statusCode = 403;
+            throw error;
+        }
+
+        // Admin tokens only work on the admin API (adminAuth.middleware); never on customer endpoints
+        if (user.isAdmin) {
+            const error = new Error('Admins are not allowed to log in from the user portal.');
             error.statusCode = 403;
             throw error;
         }

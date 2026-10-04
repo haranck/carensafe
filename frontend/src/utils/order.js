@@ -88,8 +88,9 @@ export const ORDER_FILTERS = [
 export const TRACKING_STEPS = ["confirmed", "shipped", "out_for_delivery", "delivered"];
 
 // History entries also use item-level events (return_approved / return_rejected)
+const EVENT_LABELS = { refunded: "Refunded to wallet" };
 export const historyLabel = (status) =>
-  ORDER_STATUS_LABELS[status] || ITEM_STATUS_LABELS[status] || status.replace(/_/g, " ");
+  ORDER_STATUS_LABELS[status] || ITEM_STATUS_LABELS[status] || EVENT_LABELS[status] || status.replace(/_/g, " ");
 
 const DATE_TIME = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 const SHORT_DATE = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" });

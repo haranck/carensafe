@@ -1,26 +1,39 @@
-import { CheckCircle2, RotateCcw, XCircle } from "lucide-react";
+import { CheckCircle2, RotateCcw, Wallet, XCircle } from "lucide-react";
 import OrderThumb from "./OrderThumb";
 import { ItemStatusPill } from "./OrderPills";
 import { FOCUS_RING } from "../../constants/customerTheme";
 import { formatPrice } from "../../utils/product";
 import { formatDate } from "../../utils/date";
 import { cancelReasonLabel } from "../../utils/order";
+import { formatPaise } from "../../utils/wallet";
 
 const ACTION = `inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-[12.5px] font-bold transition-colors ${FOCUS_RING}`;
 
 const meta = (item) => [item.size && `Size ${item.size}`, item.pieces && `${item.pieces} pcs`].filter(Boolean).join(" · ");
 
-// What happened to this line: cancellation, return request and the store's decision
-const ItemDetails = ({ item }) => {
+// Online-paid orders: the amount that went back to the wallet for this line
+const RefundNote = ({ refund }) =>
+  refund?.amount ? (
+    <p className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] font-semibold text-emerald-800">
+      <Wallet size={15} aria-hidden="true" className="mt-0.5 flex-shrink-0" />
+      {formatPaise(refund.amount)} refunded to wallet{refund.creditedAt ? ` on ${formatDate(refund.creditedAt)}` : ""}
+    </p>
+  ) : null;
+
+// What happened to this line: cancellation, return request, the store's decision and any refund
+const ItemDetails = ({ item, paymentMethod }) => {
   const { cancellation, return: ret } = item;
 
   if (item.status === "cancelled" && cancellation) {
     return (
-      <p className="text-[12.5px] text-slate-500">
-        Cancelled {cancellation.cancelledBy === "admin" ? "by Care N Safe" : "by you"} on {formatDate(cancellation.at)} ·{" "}
-        {cancelReasonLabel(cancellation.reason)}
-        {cancellation.note && <span className="block break-words text-slate-600">“{cancellation.note}”</span>}
-      </p>
+      <div className="flex flex-col gap-2">
+        <p className="text-[12.5px] text-slate-500">
+          Cancelled {cancellation.cancelledBy === "admin" ? "by Care N Safe" : "by you"} on {formatDate(cancellation.at)} ·{" "}
+          {cancelReasonLabel(cancellation.reason)}
+          {cancellation.note && <span className="block break-words text-slate-600">“{cancellation.note}”</span>}
+        </p>
+        <RefundNote refund={item.refund} />
+      </div>
     );
   }
   if (!ret?.requestedAt) return null;
@@ -53,17 +66,18 @@ const ItemDetails = ({ item }) => {
         <p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12.5px] text-slate-700">
           <CheckCircle2 size={15} aria-hidden="true" className="mt-0.5 flex-shrink-0" />
           <span>
-            Pack received{ret.receivedAt ? ` on ${formatDate(ret.receivedAt)}` : ""}. Your refund of {formatPrice(item.lineTotal)} is being
-            processed.
+            Pack received{ret.receivedAt ? ` on ${formatDate(ret.receivedAt)}` : ""}.
+            {paymentMethod === "cod" && ` Refund for COD orders is processed manually (${formatPrice(item.lineTotal)}).`}
           </span>
         </p>
       )}
+      {item.status === "returned" && <RefundNote refund={item.refund} />}
     </div>
   );
 };
 
 /** One ordered variant. Cancel / Return buttons appear only when the API allows them (item.canCancel / canReturn). */
-const OrderItemRow = ({ item, onCancel, onReturn }) => {
+const OrderItemRow = ({ item, paymentMethod, onCancel, onReturn }) => {
   const details = meta(item);
   const isCancelled = item.status === "cancelled";
 
@@ -88,7 +102,7 @@ const OrderItemRow = ({ item, onCancel, onReturn }) => {
         </div>
       </div>
 
-      <ItemDetails item={item} />
+      <ItemDetails item={item} paymentMethod={paymentMethod} />
 
       {(item.canCancel || item.canReturn) && (
         <div className="flex flex-wrap gap-2">

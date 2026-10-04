@@ -121,10 +121,10 @@ const WishlistPage = () => {
   // Optimistic (the card disappears at once); the toast offers Undo, which saves it again
   const handleRemove = useCallback(
     (item) => {
-      removeItem(item._id)
+      removeItem({ itemId: item.wishlistItemId, productId: item._id, variantId: item.defaultVariant._id })
         .then(() => {
           if (item.isAvailable === false) {
-            toast.success("Removed from your wishlist", { id: `wishlist-removed-${item._id}` });
+            toast.success("Removed from your wishlist", { id: `wishlist-removed-${item.wishlistItemId}` });
             return;
           }
           toast(
@@ -137,7 +137,7 @@ const WishlistPage = () => {
               />
             ),
             {
-              id: `wishlist-removed-${item._id}`,
+              id: `wishlist-removed-${item.wishlistItemId}`,
               duration: UNDO_DURATION,
               icon: <HeartOff size={18} aria-hidden="true" />,
             }
@@ -172,7 +172,7 @@ const WishlistPage = () => {
       <>
         <ul className={`${GRID} transition-opacity duration-200 ${isPlaceholderData ? "opacity-60" : "opacity-100"}`}>
           {items.map((item) => (
-            <li key={item._id}>
+            <li key={item.wishlistItemId}>
               <ProductCard item={item} mode="wishlist" onRemove={handleRemove} />
             </li>
           ))}

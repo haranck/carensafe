@@ -11,19 +11,20 @@ export const getWishlistIds = async () => {
     return response.data;
 };
 
-// variantId is optional: the variant the user was looking at
+// Each size is saved separately: { productId, variantId } → { itemId, productId, variantId }
 export const addToWishlist = async ({ productId, variantId }) => {
     const response = await AxiosInstance.post(API_ROUTES.WISHLIST.ADD, { productId, variantId });
     return response.data;
 };
 
-// Adds one to the cart, then removes the product from the wishlist
-export const moveWishlistItemToCart = async ({ productId, variantId }) => {
-    const response = await AxiosInstance.post(API_ROUTES.WISHLIST.MOVE_TO_CART(productId), { variantId });
+// { itemId }: adds one of that saved variant to the cart, then removes only that wishlist item
+export const moveWishlistItemToCart = async ({ itemId }) => {
+    const response = await AxiosInstance.post(API_ROUTES.WISHLIST.MOVE_TO_CART(itemId));
     return response.data;
 };
 
-export const removeFromWishlist = async (productId) => {
-    const response = await AxiosInstance.delete(API_ROUTES.WISHLIST.REMOVE(productId));
+// { itemId }: one saved size
+export const removeFromWishlist = async ({ itemId }) => {
+    const response = await AxiosInstance.delete(API_ROUTES.WISHLIST.REMOVE(itemId));
     return response.data;
 };

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminOrderController = require('../../controllers/admin/order/admin.order.controller');
+const adminAuthMiddleware = require('../../middlewares/adminAuth.middleware');
 const { validateOrderParams } = require('../../middlewares/order.validation');
 const {
     validateListOrdersQuery,
@@ -10,7 +11,9 @@ const {
     validateDecideReturn
 } = require('../../middlewares/admin.order.validation');
 
-// Like the other admin routes, these have no auth middleware yet (see Known issues in CLAUDE.md)
+// Every route here needs an admin login (checked before any upload or validation runs)
+router.use(adminAuthMiddleware);
+
 router.get('/', validateListOrdersQuery, (req, res) => adminOrderController.getAllOrders(req, res));
 router.get('/stats', (req, res) => adminOrderController.getStats(req, res));
 router.get('/returns', validateReturnsQuery, (req, res) => adminOrderController.getReturnItems(req, res));

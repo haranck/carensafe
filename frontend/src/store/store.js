@@ -9,16 +9,18 @@ const storage = {
 
 import authReducer from "./slices/authSlice";
 import tokenReducer from "./slices/tokenSlice";
+import adminSessionReducer from "./slices/adminSessionSlice";
 
 const persistConfig = {
     key: "root",
     storage,
-    whitelist: ["auth", "token"], // added token to whitelist to persist it across refreshes
+    whitelist: ["auth", "token", "adminSession"], // sessions survive page reloads
 };
 
 const rootReducer = combineReducers({
     auth: authReducer,
     token: tokenReducer,
+    adminSession: adminSessionReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

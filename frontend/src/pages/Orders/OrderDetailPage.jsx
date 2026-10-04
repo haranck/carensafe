@@ -179,6 +179,7 @@ const OrderDetailPage = () => {
                 <OrderItemRow
                   key={item._id}
                   item={item}
+                  paymentMethod={order.paymentMethod}
                   onCancel={(target) => openDialog("cancel", target)}
                   onReturn={(target) => openDialog("return", target)}
                 />
@@ -230,11 +231,18 @@ const OrderDetailPage = () => {
                 <span className="text-[15px] font-bold text-[#1e1a3a]">Total</span>
                 <span className="text-[20px] font-extrabold text-[#1e1a3a]">{formatPrice(pricing.total)}</span>
               </div>
-              {pricing.refundableAmount > 0 && (
+              {pricing.refundedAmount > 0 ? (
                 <p className="mt-3 flex justify-between gap-4 rounded-xl bg-emerald-50 px-3 py-2 text-[13px] font-bold text-emerald-700">
-                  <span>Refund for returns</span>
-                  <span>{formatPrice(pricing.refundableAmount)}</span>
+                  <span>Refunded to wallet</span>
+                  <span>{formatPrice(pricing.refundedAmount)}</span>
                 </p>
+              ) : (
+                pricing.refundableAmount > 0 && (
+                  <p className="mt-3 flex justify-between gap-4 rounded-xl bg-emerald-50 px-3 py-2 text-[13px] font-bold text-emerald-700">
+                    <span>Refund for returns</span>
+                    <span>{formatPrice(pricing.refundableAmount)}</span>
+                  </p>
+                )
               )}
               <p className="mt-3 text-[12.5px] text-slate-500">Payment: {PAYMENT_METHOD_LABELS[order.paymentMethod]}</p>
             </section>

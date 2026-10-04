@@ -13,9 +13,9 @@ class UserRepository {
         return User.findOne({ email: email.toLowerCase() });
     }
 
-    // Only what authMiddleware needs on every request
+    // Only what the user / admin auth middleware need on every request
     findStatusById(userId) {
-        return User.findById(userId).select('isBlocked').lean();
+        return User.findById(userId).select('isBlocked isAdmin').lean();
     }
 
     findByGoogleId(googleId) {

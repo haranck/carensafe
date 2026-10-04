@@ -50,6 +50,13 @@ const orderItemSchema = new mongoose.Schema({
         decision: { type: String, enum: ['approved', 'rejected'] },
         adminReason: { type: String, trim: true },
         receivedAt: Date
+    },
+
+    // Online-paid orders only: what went back to the customer's wallet for this line (amount in PAISE)
+    refund: {
+        amount: Number,
+        creditedAt: Date,
+        walletTransaction: { type: mongoose.Schema.Types.ObjectId, ref: 'WalletTransaction' }
     }
 });
 
@@ -110,7 +117,10 @@ const orderSchema = new mongoose.Schema(
             discount: { type: Number, default: 0, min: 0 },
             shipping: { type: Number, default: 0, min: 0 },
             total: { type: Number, required: true, min: 0 },
-            refundableAmount: { type: Number, default: 0, min: 0 }
+            // Owed back for returned lines (and, for online-paid orders, cancelled lines)
+            refundableAmount: { type: Number, default: 0, min: 0 },
+            // Actually refunded to the wallet (online-paid orders); COD refunds are manual and not tracked here
+            refundedAmount: { type: Number, default: 0, min: 0 }
         },
 
         paymentMethod: {
