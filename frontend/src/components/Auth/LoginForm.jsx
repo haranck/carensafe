@@ -86,10 +86,10 @@ const LoginForm = () => {
     };
 
     const inputClass =
-        "flex-1 bg-transparent border-none outline-none py-3.5 px-3.5 text-[14.5px] text-slate-800 placeholder:text-slate-300 placeholder:text-[13.5px]";
+        "min-w-0 flex-1 bg-transparent border-none outline-none py-3.5 px-3.5 text-[14.5px] text-slate-800 placeholder:text-slate-300 placeholder:text-[13.5px]";
 
     return (
-        <div className="bg-white rounded-3xl shadow-[0_12px_40px_rgba(59,42,138,0.12),0_2px_8px_rgba(0,0,0,0.05)] p-10 w-full max-w-[460px]">
+        <div className="bg-white rounded-3xl shadow-[0_12px_40px_rgba(59,42,138,0.12),0_2px_8px_rgba(0,0,0,0.05)] p-6 sm:p-10 w-full max-w-[460px]">
 
             {/* Logo */}
             <div className="flex justify-center mb-6">

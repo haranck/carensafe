@@ -4,6 +4,7 @@ import ExploreProducts from "./ExploreProducts";
 import WhyCareNSafe from "./WhyCareNSafe";
 import Testimonials from "./Testimonials";
 import CtaBanner from "./CtaBanner";
+import BloomBanner from "./BloomBanner";
 import { ViewAllLink } from "./SectionHeading";
 import { shopPath } from "../../constants/frontendRoutes";
 
@@ -57,6 +58,7 @@ const HomeSections = () => (
     <ExploreProducts />
     <WhyCareNSafe />
     <Testimonials />
+    <BloomBanner />
     <CtaBanner />
   </>
 );
