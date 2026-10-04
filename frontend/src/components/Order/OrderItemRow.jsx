@@ -11,14 +11,38 @@ const ACTION = `inline-flex h-10 items-center gap-1.5 rounded-full border px-4 t
 
 const meta = (item) => [item.size && `Size ${item.size}`, item.pieces && `${item.pieces} pcs`].filter(Boolean).join(" · ");
 
-// Online-paid orders: the amount that went back to the wallet for this line
-const RefundNote = ({ refund }) =>
-  refund?.amount ? (
-    <p className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] font-semibold text-emerald-800">
-      <Wallet size={15} aria-hidden="true" className="mt-0.5 flex-shrink-0" />
-      {formatPaise(refund.amount)} refunded to wallet{refund.creditedAt ? ` on ${formatDate(refund.creditedAt)}` : ""}
-    </p>
-  ) : null;
+const SOURCE_REFUND_TEXT = {
+  pending: "refund to your original payment method is processing (5–7 working days)",
+  completed: "refunded to your original payment method",
+  failed: "refund to your original payment method failed; our team will contact you",
+};
+
+// Prepaid orders: what this line refunded and where (wallet now; original method via Razorpay)
+const RefundNote = ({ refund }) => {
+  if (!refund?.amount) return null;
+  const toSource = refund.onlineDestination === "source" ? refund.onlinePaise || 0 : 0;
+  const toWallet = refund.amount - toSource;
+  return (
+    <div className="flex flex-col gap-1.5">
+      {toWallet > 0 && (
+        <p className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12.5px] font-semibold text-emerald-800">
+          <Wallet size={15} aria-hidden="true" className="mt-0.5 flex-shrink-0" />
+          {formatPaise(toWallet)} refunded to wallet{refund.creditedAt ? ` on ${formatDate(refund.creditedAt)}` : ""}
+        </p>
+      )}
+      {toSource > 0 && (
+        <p
+          className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-[12.5px] font-semibold ${
+            refund.onlineStatus === "failed" ? "border-rose-200 bg-rose-50 text-rose-700" : "border-sky-200 bg-sky-50 text-sky-800"
+          }`}
+        >
+          <RotateCcw size={15} aria-hidden="true" className="mt-0.5 flex-shrink-0" />
+          {formatPaise(toSource)} {SOURCE_REFUND_TEXT[refund.onlineStatus] || SOURCE_REFUND_TEXT.pending}
+        </p>
+      )}
+    </div>
+  );
+};
 
 // What happened to this line: cancellation, return request, the store's decision and any refund
 const ItemDetails = ({ item, paymentMethod }) => {

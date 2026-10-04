@@ -22,7 +22,9 @@ carensafe/
 - Backend startup needs MongoDB **and** Redis reachable; `server.js` exits on either failure.
 - Backend env is validated in `src/config/envValidation.js` (required: `MONGO_URI`, `JWT_ACCESS_SECRET`,
   `JWT_REFRESH_SECRET`; optional: `PORT`, `NODE_ENV`, `FRONTEND_URL`, `REDIS_URL`, `JWT_*_EXPIRES_IN`,
-  `REFRESH_TOKEN_MAX_AGE`, `CLOUDINARY_*`). `utils/email.js` reads `SMTP_*`/`EMAIL_FROM` directly; without
+  `REFRESH_TOKEN_MAX_AGE`, `CLOUDINARY_*`). Razorpay: `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` (required),
+  `RAZORPAY_WEBHOOK_SECRET`, `PAYMENT_EXPIRY_MINUTES`, `REFUND_DESTINATION`, `WALLET_TOPUP_MIN/MAX` (see `backend/docs/PAYMENTS.md`).
+  Optional `CONTACT_EMAIL_TO`: inbox for Contact page messages (defaults to `SMTP_USER`). `utils/email.js` reads `SMTP_*`/`EMAIL_FROM` directly; without
   `SMTP_USER` the OTP is only logged to the console (`[Mock Email]`).
 - Frontend needs `VITE_API_BASE_URL` pointing at the API **including `/api`** (API_ROUTES start at `/user/...`).
   Optional: `VITE_GOOGLE_CLIENT_ID` (Google button), `VITE_MAPBOX_ACCESS_TOKEN` (public `pk.` token, address map).
@@ -41,6 +43,8 @@ app.js mount → routes → middlewares → controller → service → repositor
 
 Mounted in `src/app.js`: `/api/user/auth`, `/api/user/products`, `/api/user/wishlist`, `/api/user/cart`,
 `/api/user/profile` (the `user/user` route/controller/service files), `/api/user/addresses`, `/api/user/orders`, `/api/user/wallet`,
+`/api/user/payments`, `/api/payments/razorpay/webhook` (raw body, mounted before `express.json`),
+`/api/user/contact` (public Contact form: saved to `contactmessages`, emailed to `CONTACT_EMAIL_TO` or `SMTP_USER`, rate-limited),
 `/api/admin/auth`, `/api/admin/users`, `/api/admin/products`, `/api/admin/orders`.
 `globalErrorHandler` is registered last.
 
@@ -322,7 +326,8 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 ## Known issues (as of 2026-10-03)
 
 **Security**
-- Global rate limiter is commented out in `app.js`; login/OTP endpoints are unthrottled.
+- Global rate limiter is commented out in `app.js`; login/OTP endpoints are unthrottled (order/payment endpoints have
+  `paymentRateLimiter`).
 - OTP brute-force guard is weak: a wrong attempt resets `otp_attempts:<email>` TTL to 30s while the signup key lives 300s.
 - `frontend/.env` is tracked in git (`frontend/.gitignore` doesn't ignore `.env`).
 - Logout (`hooks/Auth/useLogout.js`) blacklists only the refresh token: the access token stays valid for up to 15 min.
@@ -341,17 +346,21 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
   deleted (orphans).
 
 **Structure / inconsistencies**
-- Orders (COD only): rules in `config/orders.js` (statuses, transitions, 7-day return window, cancel reasons), pure helpers
+- **Payments**: read `backend/docs/PAYMENTS.md` before touching money code. Paise everywhere in payment/wallet code,
+  `utils/transaction.js` `withTransaction` for every money change (never call Razorpay inside it), idempotency keys on
+  every wallet/payment write, `services/user/payment/payment.service.js` owns Razorpay (checkout, verify, webhook,
+  reconcile, expiry + refund jobs in `src/jobs/payment.jobs.js`), `orderService.refundForOrderItems` owns refunds.
+- Orders: rules in `config/orders.js` (statuses, transitions, 7-day return window, cancel reasons), pure helpers
   in `utils/order.js`, logic in `services/user/order/order.service.js` (placing: one transaction for stock + order + cart
   clear; cancel / return per item) and `services/admin/order/admin.order.service.js`. Customer responses carry
   `canCancel` / `canReturn` flags so the UI never re-implements the rules. COD refunds are manual (`pricing.refundableAmount`);
-  the `razorpay` fields and `paymentMethod: 'razorpay'` are reserved for the online-payment step.
+  online payments are live (Razorpay, wallet, wallet + online; see `backend/docs/PAYMENTS.md`).
 - Wallet (`services/user/wallet/wallet.service.js`): money in integer **paise** (orders stay in rupees; convert with
   `toPaise`). Read-only API (`GET /api/user/wallet`, `/transactions`); only server code credits it. `credit`/`debit` are
   idempotent via a unique `idempotencyKey` (`refund:<orderId>:<itemId>`) and join the caller's transaction. Online-paid
-  orders (`isPaidOnline`) refund received returns and cancelled lines to the wallet (`refundForItemPaise`, item `refund`,
-  `pricing.refundedAmount`, payment status `partially_refunded`/`refunded`); COD orders never do. No order can be paid
-  online yet (Razorpay isn't integrated), so wallet credits only happen once it is. "Add money" has no endpoint.
+  orders (`isPrepaid`: online and/or wallet) refund received returns and cancelled lines (`refundForItemPaise`, item `refund`,
+  `pricing.refundedAmount`, payment status `partially_refunded`/`refunded`); COD orders never do. Top-ups go through
+  Razorpay (`POST /api/user/wallet/topup`, credited only after verification).
 - Some products share variant `_id`s (duplicated product documents). Orders, stock and the wishlist use product + variant
   together; the cart's one-line-per-variant check does not.
 - The wishlist is per VARIANT (unique `{ user, product, variant }`; `scripts/migrate-wishlist-variants.js [--dry-run]`
@@ -374,8 +383,7 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - `AdminRoutes.jsx` redefines a local `FRONTEND_ROUTES`. Many paths are hardcoded (`"/home"`, `"/admin/products"`,
   axios `/user/auth/refresh`). `FRONTEND_ROUTES` lacks the admin sub-pages.
 - `pages/Auth/AuthPage.jsx` is unused (not routed) and has lint errors. Login, Signup and Auth pages duplicate the same branding block.
-- Links to routes that don't exist: `/shop`, `/orders`, `/wishlist`, `/about`, `/technology`, `/care-shorts`,
-  `/contact`, `/profile`, `/forgot-password`. There's no 404 route. Only `/home` is lazy-loaded.
+- Links to routes that don't exist: `/technology`, `/care-shorts`, `/forgot-password` (About is `/about`, Contact `/contact`). There's no 404 route. Only `/home` is lazy-loaded.
 - `index.css` has a leftover dark theme, unused `.glass-*`/`.btn-*`/`.input-field` classes and `.Toastify__*`
   overrides (the app uses react-hot-toast). `tailwind.config.js` is ignored by v4, autoprefixer in
   `postcss.config.js` is redundant, and `App.css` is empty.

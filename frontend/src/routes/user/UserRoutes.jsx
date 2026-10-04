@@ -30,6 +30,8 @@ const ProfileOrdersPage = lazy(() => import("../../pages/Profile/ProfileOrdersPa
 const ProfileAddressesPage = lazy(() => import("../../pages/Profile/ProfileAddressesPage"));
 const ProfileWalletPage = lazy(() => import("../../pages/Profile/ProfileWalletPage"));
 const ComingSoonPage = lazy(() => import("../../pages/ComingSoon/ComingSoonPage"));
+const AboutPage = lazy(() => import("../../pages/About/AboutPage"));
+const ContactPage = lazy(() => import("../../pages/Contact/ContactPage"));
 
 // Download the lazy pages' code while the browser is idle, so moving between pages never waits on it
 const usePreloadPages = () => {
@@ -63,6 +65,8 @@ const UserRoutes = () => {
                 {/* Open to everyone, logged in or not (actions that need an account go through useRequireAuth) */}
                 <Route path={FRONTEND_ROUTES.SHOP} element={<ShopPage />} />
                 <Route path={FRONTEND_ROUTES.PRODUCT_DETAIL} element={<ProductDetailPage />} />
+                <Route path={FRONTEND_ROUTES.ABOUT} element={<AboutPage />} />
+                <Route path={FRONTEND_ROUTES.CONTACT} element={<ContactPage />} />
 
                 {/* Member home; guests are sent to the landing page (same sections) quietly */}
                 <Route element={<ProtectedRoute guestRedirect={FRONTEND_ROUTES.LANDING} />}>

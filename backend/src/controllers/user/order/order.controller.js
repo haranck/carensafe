@@ -1,4 +1,5 @@
 const orderService = require('../../../services/user/order/order.service');
+const paymentService = require('../../../services/user/payment/payment.service');
 
 const fail = (res, error) => {
     const statusCode = error.statusCode || 500;
@@ -9,14 +10,15 @@ const fail = (res, error) => {
 };
 
 class OrderController {
+    // COD / wallet: the final order. Online: the pending order plus the Razorpay checkout details.
     async placeOrder(req, res) {
         try {
-            const { addressId, paymentMethod } = req.body;
-            const order = await orderService.placeOrder(req.user.userId, { addressId, paymentMethod });
+            const { addressId, paymentMethod, useWallet, idempotencyKey } = req.body;
+            const result = await paymentService.checkout(req.user.userId, { addressId, paymentMethod, useWallet, idempotencyKey });
             return res.status(201).json({
                 success: true,
-                message: 'Order placed',
-                data: order
+                message: result.paymentRequired ? 'Order created, complete the payment' : 'Order placed',
+                data: result
             });
         } catch (error) {
             return fail(res, error);
@@ -46,8 +48,10 @@ class OrderController {
         }
     }
 
+    // An unpaid order is checked with Razorpay first (paid but the browser closed)
     async getMyOrder(req, res) {
         try {
+            await paymentService.reconcilePendingOrder(req.user.userId, req.params.id);
             const order = await orderService.getMyOrder(req.user.userId, req.params.id);
             return res.status(200).json({
                 success: true,
@@ -64,11 +68,25 @@ class OrderController {
         try {
             const { reason, note } = req.body;
             const itemId = req.params.itemId || null;
-            const order = await orderService.cancelMyOrder(req.user.userId, req.params.id, itemId, { reason, note });
+            const order = await paymentService.cancelOrder(req.user.userId, req.params.id, itemId, { reason, note });
             return res.status(200).json({
                 success: true,
                 message: itemId ? 'Item cancelled' : 'Order cancelled',
                 data: order
+            });
+        } catch (error) {
+            return fail(res, error);
+        }
+    }
+
+    // The same Razorpay order again while the payment window is open
+    async retryPayment(req, res) {
+        try {
+            const result = await paymentService.retryOrderPayment(req.user.userId, req.params.id);
+            return res.status(200).json({
+                success: true,
+                message: result.paymentRequired ? 'Complete the payment' : 'This order is already paid',
+                data: result
             });
         } catch (error) {
             return fail(res, error);

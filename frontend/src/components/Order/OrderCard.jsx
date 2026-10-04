@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import OrderThumb from "./OrderThumb";
 import { OrderStatusPill, PaymentStatusPill } from "./OrderPills";
+import { PendingPaymentBanner } from "./PaymentBanners";
 import { orderDetailPath } from "../../constants/frontendRoutes";
 import { FOCUS_RING } from "../../constants/customerTheme";
 import { formatPrice } from "../../utils/product";
@@ -45,6 +46,12 @@ const OrderCard = ({ order }) => {
           <p className="text-[17px] font-extrabold text-[#1e1a3a]">{formatPrice(order.pricing.total)}</p>
         </div>
       </div>
+
+      {order.orderStatus === "pending_payment" && order.canRetryPayment && (
+        <div className="mt-4">
+          <PendingPaymentBanner order={order} compact />
+        </div>
+      )}
 
       <Link
         to={orderDetailPath(order._id)}

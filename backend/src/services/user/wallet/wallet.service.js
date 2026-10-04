@@ -1,4 +1,6 @@
 const walletRepository = require('../../../repositories/user/wallet.repository');
+const { withTransaction } = require('../../../utils/transaction');
+const env = require('../../../config/envValidation');
 
 const DUPLICATE_KEY_ERROR = 11000;
 
@@ -16,9 +18,22 @@ const isWholePaise = (amount) => Number.isInteger(amount) && amount > 0;
  * `idempotencyKey` twice returns the first transaction and changes nothing.
  */
 class WalletService {
+    // balance in paise; top-up limits in rupees (the "Add money" form uses them); Razorpay mode
     async getWallet(userId) {
         const wallet = await walletRepository.findOrCreate(userId);
-        return { balance: wallet.balance, currency: 'INR' };
+        return {
+            balance: wallet.balance,
+            currency: 'INR',
+            topup: { min: env.WALLET_TOPUP_MIN, max: env.WALLET_TOPUP_MAX },
+            // 'test' shows the Razorpay test-mode hints at checkout / top-up
+            paymentMode: env.RAZORPAY_MODE
+        };
+    }
+
+    // Balance in paise without creating a wallet (0 when there is none yet)
+    async getBalance(userId, session) {
+        const wallet = await walletRepository.findByUser(userId, session);
+        return wallet?.balance || 0;
     }
 
     // type: 'credit' | 'debit' | '' (all)
@@ -72,7 +87,7 @@ class WalletService {
         };
 
         try {
-            return session ? await work(session) : await walletRepository.runInTransaction(work);
+            return session ? await work(session) : await withTransaction(work);
         } catch (error) {
             // Two requests raced past the lookup: the unique key stopped the second one (its transaction is aborted,
             // so its balance change never happened). Outside a caller's transaction we can return the winner.

@@ -1,13 +1,8 @@
-const mongoose = require('mongoose');
 const Wallet = require('../../models/wallet.model');
 const WalletTransaction = require('../../models/walletTransaction.model');
 
 // Wallets and their transactions (amounts in paise). Every method can join the caller's transaction (`session`).
 class WalletRepository {
-    runInTransaction(work) {
-        return mongoose.connection.transaction(work);
-    }
-
     findByUser(userId, session) {
         return Wallet.findOne({ user: userId }).session(session || null).lean();
     }

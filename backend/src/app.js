@@ -15,6 +15,11 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Razorpay webhook needs the raw body for its signature, so it's mounted before the JSON parser
+const razorpayWebhookRoutes = require('./routes/user/payment/razorpayWebhook.routes');
+app.use('/api/payments/razorpay/webhook', razorpayWebhookRoutes);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -30,6 +35,8 @@ const profileRoutes = require('./routes/user/user/user.routes');
 const addressRoutes = require('./routes/user/address/address.routes');
 const orderRoutes = require('./routes/user/order/order.routes');
 const walletRoutes = require('./routes/user/wallet/wallet.routes');
+const paymentRoutes = require('./routes/user/payment/payment.routes');
+const contactRoutes = require('./routes/user/contact/contact.routes');
 const adminAuthRoutes = require('./routes/admin/admin.auth.routes');
 const adminUserRoutes = require('./routes/admin/admin.user.routes');
 const adminProductRoutes = require('./routes/admin/admin.product.routes');
@@ -43,6 +50,8 @@ app.use('/api/user/profile', profileRoutes);
 app.use('/api/user/addresses', addressRoutes);
 app.use('/api/user/orders', orderRoutes);
 app.use('/api/user/wallet', walletRoutes);
+app.use('/api/user/payments', paymentRoutes);
+app.use('/api/user/contact', contactRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/products', adminProductRoutes);

@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { CANCEL_REASONS, STATUS_GROUPS } = require('../config/orders');
+const { USER_CANCEL_REASONS, STATUS_GROUPS } = require('../config/orders');
 
 const objectId = (label) =>
     Joi.string().hex().length(24).messages({
@@ -16,12 +16,19 @@ const page = Joi.number().integer().min(1).messages({ 'number.base': 'Page must 
 const limit = (max) =>
     Joi.number().integer().min(1).max(max).messages({ 'number.base': 'Limit must be a number.', 'number.max': `Limit can be at most ${max}.` });
 
+// paymentMethod razorpay + useWallet = wallet first, the rest online. idempotencyKey: one per checkout attempt (the
+// client keeps it until success), so retries / double clicks return the same order.
 const placeOrderSchema = Joi.object({
     addressId: objectId('address').required(),
-    paymentMethod: Joi.string().valid('cod').required().messages({
-        'any.only': 'Only Cash on Delivery is available right now.',
+    paymentMethod: Joi.string().valid('cod', 'razorpay', 'wallet').required().messages({
+        'any.only': 'Choose a valid payment method.',
         'any.required': 'Choose a payment method.'
-    })
+    }),
+    useWallet: Joi.boolean().strict().messages({ 'boolean.base': 'useWallet must be true or false.' }),
+    idempotencyKey: Joi.string()
+        .pattern(/^[A-Za-z0-9-]{8,64}$/)
+        .required()
+        .messages({ 'string.pattern.base': 'Invalid checkout attempt id.', 'any.required': 'A checkout attempt id is required.' })
 });
 
 const myOrdersQuerySchema = Joi.object({
@@ -33,7 +40,7 @@ const myOrdersQuerySchema = Joi.object({
 });
 
 const cancelSchema = Joi.object({
-    reason: Joi.string().valid(...CANCEL_REASONS).required().messages({
+    reason: Joi.string().valid(...USER_CANCEL_REASONS).required().messages({
         'any.only': 'Choose a valid cancellation reason.',
         'any.required': 'Choose a reason for cancelling.',
         'string.empty': 'Choose a reason for cancelling.'

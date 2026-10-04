@@ -52,6 +52,7 @@ export const API_ROUTES = {
         LIST: "/user/orders",
         DETAIL: (id) => `/user/orders/${id}`,
         CANCEL: (id) => `/user/orders/${id}/cancel`,
+        RETRY_PAYMENT: (id) => `/user/orders/${id}/retry-payment`,
         CANCEL_ITEM: (id, itemId) => `/user/orders/${id}/items/${itemId}/cancel`,
         RETURN: (id) => `/user/orders/${id}/return`,
         RETURN_ITEM: (id, itemId) => `/user/orders/${id}/items/${itemId}/return`,
@@ -59,6 +60,14 @@ export const API_ROUTES = {
     WALLET: {
         GET: "/user/wallet",
         TRANSACTIONS: "/user/wallet/transactions",
+        TOPUP: "/user/wallet/topup",
+    },
+    CONTACT: {
+        SEND: "/user/contact",
+    },
+    PAYMENTS: {
+        VERIFY: "/user/payments/verify",
+        FAILED: "/user/payments/failed",
     },
     ADMIN_AUTH: {
         LOGIN: "/admin/auth/login",

@@ -1,6 +1,7 @@
 const walletService = require('../../../services/user/wallet/wallet.service');
+const paymentService = require('../../../services/user/payment/payment.service');
 
-// Read-only: no endpoint can add money to a wallet (only order refunds on the server do)
+// Balance and history are read-only; money arrives only through refunds and verified Razorpay top-ups
 class WalletController {
     async getWallet(req, res) {
         try {
@@ -9,6 +10,24 @@ class WalletController {
                 success: true,
                 message: 'Wallet retrieved successfully',
                 data: wallet
+            });
+        } catch (error) {
+            const statusCode = error.statusCode || 500;
+            return res.status(statusCode).json({
+                success: false,
+                message: error.message || 'Internal Server Error'
+            });
+        }
+    }
+
+    // Starts a top-up: a Razorpay order for the amount (rupees). The wallet is credited only after verification.
+    async startTopup(req, res) {
+        try {
+            const result = await paymentService.startWalletTopup(req.user.userId, req.body.amount);
+            return res.status(201).json({
+                success: true,
+                message: 'Complete the payment to add money',
+                data: result
             });
         } catch (error) {
             const statusCode = error.statusCode || 500;

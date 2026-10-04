@@ -1,7 +1,8 @@
 import { AxiosInstance } from "../../api/axios";
 import { API_ROUTES } from "../../constants/apiRoutes";
 
-// { addressId, paymentMethod: "cod" } → the new order
+// { addressId, paymentMethod: "cod" | "razorpay" | "wallet", useWallet, idempotencyKey }
+// → { orderId, orderNumber, paymentRequired, order, razorpay: checkout details | null }
 export const placeOrder = async (data) => {
     const response = await AxiosInstance.post(API_ROUTES.ORDERS.PLACE, data);
     return response.data;
@@ -29,5 +30,11 @@ export const cancelOrder = async ({ orderId, itemId, reason, note }) => {
 export const requestReturn = async ({ orderId, itemId, note, packUnopenedConfirmed }) => {
     const url = itemId ? API_ROUTES.ORDERS.RETURN_ITEM(orderId, itemId) : API_ROUTES.ORDERS.RETURN(orderId);
     const response = await AxiosInstance.post(url, { note, packUnopenedConfirmed });
+    return response.data;
+};
+
+// Unpaid online order: the same Razorpay checkout again (while the payment window is open)
+export const retryOrderPayment = async (id) => {
+    const response = await AxiosInstance.post(API_ROUTES.ORDERS.RETRY_PAYMENT(id));
     return response.data;
 };

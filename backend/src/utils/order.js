@@ -30,13 +30,13 @@ const itemTitle = (name = '', variantName = '') => {
  * `total` is what the order costs (COD collects it on delivery); returned lines don't change it, they are added to
  * `refundableAmount` (refunded manually for COD until Razorpay refunds exist).
  */
-const recalculatePricing = (pricing, items, { paidOnline = false } = {}) => {
+const recalculatePricing = (pricing, items, { prepaid = false } = {}) => {
     const kept = items.filter((item) => item.status !== 'cancelled');
     const subtotal = sum(kept.map((item) => item.lineTotal));
     const discount = Math.min(pricing.discount || 0, subtotal);
     const shipping = kept.length === 0 ? 0 : pricing.shipping || 0;
-    // Online-paid orders also owe back what was cancelled after paying; COD cancellations were never paid
-    const owed = items.filter((item) => item.status === 'returned' || (paidOnline && item.status === 'cancelled'));
+    // Prepaid orders also owe back what was cancelled after paying; COD cancellations were never paid
+    const owed = items.filter((item) => item.status === 'returned' || (prepaid && item.status === 'cancelled'));
     return {
         subtotal,
         discount,
@@ -47,10 +47,45 @@ const recalculatePricing = (pricing, items, { paidOnline = false } = {}) => {
     };
 };
 
-// Paid online (Razorpay) and not fully refunded yet: refunds go to the wallet. COD orders never do.
-const isPaidOnline = (order) => order.paymentMethod === 'razorpay' && ['paid', 'partially_refunded'].includes(order.paymentStatus);
+// Paid up front (online and/or wallet) and not fully refunded yet: cancellations and returns refund automatically.
+// COD orders never do (nothing was paid before delivery).
+const isPrepaid = (order) =>
+    ['razorpay', 'wallet'].includes(order.paymentMethod) && ['paid', 'partially_refunded'].includes(order.paymentStatus);
 
 const toPaise = (rupees) => Math.round(rupees * 100);
+
+// How a prepaid order was paid and what already went back (paise). Orders from before order.payment existed were
+// paid fully online.
+const paidAmounts = (order) => {
+    const payment = order.payment || {};
+    const walletPaise = payment.walletPaise || 0;
+    let onlinePaise = payment.onlinePaise || 0;
+    if (!walletPaise && !onlinePaise && order.paymentMethod === 'razorpay') {
+        onlinePaise = toPaise(sum(order.items.map((item) => item.lineTotal)) - (order.pricing.discount || 0) + (order.pricing.shipping || 0));
+    }
+    return {
+        walletPaise,
+        onlinePaise,
+        refundedWalletPaise: payment.refundedWalletPaise || 0,
+        refundedOnlinePaise: payment.refundedOnlinePaise || 0
+    };
+};
+
+/**
+ * Splits a refund between the wallet-paid and online-paid parts, in proportion to how the order was paid, and never
+ * beyond what is left of either part (`remaining` = { wallet, online } still refundable, paise). Returns the parts;
+ * their sum can be lower than `amountPaise` only when the order has nothing left to refund.
+ */
+const splitRefund = (amountPaise, paid, remaining) => {
+    const total = paid.walletPaise + paid.onlinePaise;
+    if (total <= 0 || amountPaise <= 0) return { walletPaise: 0, onlinePaise: 0 };
+    let onlinePaise = Math.min(Math.round((amountPaise * paid.onlinePaise) / total), remaining.online);
+    let walletPaise = Math.min(amountPaise - onlinePaise, remaining.wallet);
+    // Rounding / caps: put any rest on whichever part still has room
+    const rest = amountPaise - onlinePaise - walletPaise;
+    if (rest > 0) onlinePaise += Math.min(rest, remaining.online - onlinePaise);
+    return { walletPaise, onlinePaise };
+};
 
 /**
  * What one line refunds, in PAISE: its line total minus its share of the order discount (shared in proportion to the
@@ -82,8 +117,10 @@ module.exports = {
     itemTitle,
     recalculatePricing,
     statusAfterReturns,
-    isPaidOnline,
+    isPrepaid,
     toPaise,
+    paidAmounts,
+    splitRefund,
     refundForItemPaise,
     paymentStatusAfterRefund
 };

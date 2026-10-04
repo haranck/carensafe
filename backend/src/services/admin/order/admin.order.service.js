@@ -1,9 +1,12 @@
 const orderRepository = require('../../../repositories/user/order.repository');
 const productRepository = require('../../../repositories/user/product.repository');
 const userRepository = require('../../../repositories/user/user.repository');
+const paymentRepository = require('../../../repositories/user/payment.repository');
 const orderService = require('../../user/order/order.service');
-const { ORDER_STATUSES, ADMIN_CANCELLABLE_STATUSES, STATUS_TRANSITIONS } = require('../../../config/orders');
-const { readable, recalculatePricing, statusAfterReturns, isPaidOnline, paymentStatusAfterRefund } = require('../../../utils/order');
+const paymentService = require('../../user/payment/payment.service');
+const { ORDER_STATUSES, ADMIN_CANCELLABLE_STATUSES, STATUS_TRANSITIONS, PENDING_PAYMENT_STATUS } = require('../../../config/orders');
+const { readable, recalculatePricing, statusAfterReturns, isPrepaid, paymentStatusAfterRefund } = require('../../../utils/order');
+const { withTransaction } = require('../../../utils/transaction');
 
 const RETURN_ITEM_STATUSES = ['return_requested', 'return_approved'];
 
@@ -35,10 +38,30 @@ const startOfToday = () => {
 };
 
 // What the admin panel may offer for this order
-const toAdminOrder = (order) => ({
+// Razorpay audit trail for the admin panel (no secrets are stored, so it can be shown as is)
+const toAdminPayment = (payment) => ({
+    _id: payment._id,
+    purpose: payment.purpose,
+    amount: payment.amount,
+    currency: payment.currency,
+    status: payment.status,
+    method: payment.method,
+    mode: payment.mode,
+    razorpayOrderId: payment.razorpayOrderId,
+    razorpayPaymentId: payment.razorpayPaymentId,
+    attempts: payment.attempts,
+    refunds: payment.refunds,
+    refundedPaise: payment.refundedPaise,
+    capturedAt: payment.capturedAt,
+    expiresAt: payment.expiresAt,
+    createdAt: payment.createdAt
+});
+
+const toAdminOrder = (order, payments = []) => ({
     ...order,
     allowedNextStatuses: STATUS_TRANSITIONS[order.orderStatus] || [],
-    canCancel: ADMIN_CANCELLABLE_STATUSES.includes(order.orderStatus)
+    canCancel: ADMIN_CANCELLABLE_STATUSES.includes(order.orderStatus) || order.orderStatus === PENDING_PAYMENT_STATUS,
+    payments: payments.map(toAdminPayment)
 });
 
 class AdminOrderService {
@@ -105,9 +128,9 @@ class AdminOrderService {
     }
 
     async getOrder(orderId) {
-        const order = await orderRepository.findByIdWithCustomer(orderId);
+        const [order, payments] = await Promise.all([orderRepository.findByIdWithCustomer(orderId), paymentRepository.findByOrder(orderId)]);
         if (!order) throw notFound();
-        return toAdminOrder(order);
+        return toAdminOrder(order, payments);
     }
 
     // Only the forward steps in STATUS_TRANSITIONS. Shipping needs courier + tracking number; delivery records
@@ -155,6 +178,13 @@ class AdminOrderService {
 
     // Same rules and stock handling as a customer cancellation; admins may also cancel shipped orders
     async cancelOrder(orderId, { reason, note }) {
+        const order = await orderRepository.findById(orderId);
+        if (!order) throw notFound();
+        // Unpaid online order: Razorpay is checked first, then stock and the wallet part go back
+        if (order.orderStatus === PENDING_PAYMENT_STATUS) {
+            await paymentService.cancelUnpaidOrder(order, { by: 'admin', reason, note });
+            return this.getOrder(orderId);
+        }
         await orderService.cancelItems({
             loadOrder: (session) => orderRepository.findById(orderId, session),
             itemId: null,
@@ -163,6 +193,7 @@ class AdminOrderService {
             by: 'admin',
             allowedStatuses: ADMIN_CANCELLABLE_STATUSES
         });
+        paymentService.kickRefunds();
         return this.getOrder(orderId);
     }
 
@@ -205,10 +236,10 @@ class AdminOrderService {
         return this.getOrder(orderId);
     }
 
-    // The unopened pack came back: restock the variant and add the line to the refundable amount. For an online-paid
-    // order the line is refunded to the customer's wallet in the same transaction (COD refunds stay manual).
+    // The unopened pack came back: restock the variant and add the line to the refundable amount. A prepaid order's line
+    // is refunded in the same transaction (orderService.refundForOrderItems); COD refunds stay manual.
     async markReturnReceived(orderId, itemId) {
-        await orderRepository.runInTransaction(async (session) => {
+        await withTransaction(async (session) => {
             const order = await orderRepository.findById(orderId, session);
             if (!order) throw notFound();
             const item = findItem(order, itemId);
@@ -219,19 +250,22 @@ class AdminOrderService {
                 sameId(line._id, itemId) ? { ...line, status: 'returned', return: { ...line.return, receivedAt: now } } : line
             );
             const orderStatus = statusAfterReturns(items);
-            const paidOnline = isPaidOnline(order);
-            let pricing = recalculatePricing(order.pricing, items, { paidOnline });
+            const prepaid = isPrepaid(order);
+            let pricing = recalculatePricing(order.pricing, items, { prepaid });
             let paymentStatus = order.paymentStatus;
+            const extra = {};
             const history = [{ status: 'returned', note: `Return received for ${item.name} (restocked)`, by: 'admin', at: now }];
 
             await productRepository.incrementVariantStock(item.product, item.variant, item.quantity, session);
 
-            if (paidOnline) {
-                const refund = await orderService.refundToWallet(order, [item], session);
+            if (prepaid) {
+                const refund = await orderService.refundForOrderItems(order, [item], session);
                 const credited = refund.byItem[String(item._id)];
                 if (credited) items = items.map((line) => (sameId(line._id, itemId) ? { ...line, refund: credited } : line));
-                pricing = { ...pricing, refundedAmount: (order.pricing.refundedAmount || 0) + refund.totalRupees };
+                pricing = { ...pricing, refundedAmount: (order.pricing.refundedAmount || 0) + refund.totalPaise / 100 };
                 paymentStatus = paymentStatusAfterRefund(items);
+                extra['payment.refundedWalletPaise'] = refund.refundedWalletPaise;
+                extra['payment.refundedOnlinePaise'] = refund.refundedOnlinePaise;
                 if (refund.historyEntry) history.push(refund.historyEntry);
             }
 
@@ -239,13 +273,14 @@ class AdminOrderService {
                 order._id,
                 order.updatedAt,
                 {
-                    $set: { items, orderStatus, pricing, paymentStatus },
+                    $set: { items, orderStatus, pricing, paymentStatus, ...extra },
                     $push: { statusHistory: { $each: history } }
                 },
                 session
             );
             if (!saved) throw changedMeanwhile();
         });
+        paymentService.kickRefunds();
         return this.getOrder(orderId);
     }
 

@@ -42,6 +42,19 @@ class CartRepository {
         ).lean();
     }
 
+    // After an online payment: takes the bought quantities out of the cart (the cart may have changed while paying);
+    // lines that reach 0 are removed. items: [{ product, variant, quantity }]
+    async removePurchased(userId, items, session) {
+        for (const item of items) {
+            await Cart.updateOne(
+                { user: userId, items: { $elemMatch: { product: item.product, variant: item.variant } } },
+                { $inc: { 'items.$.quantity': -item.quantity } },
+                { session }
+            );
+        }
+        await Cart.updateOne({ user: userId }, { $pull: { items: { quantity: { $lte: 0 } } } }, { session });
+    }
+
     clear(userId, session) {
         return Cart.updateOne({ user: userId }, { $set: { items: [] } }, { session });
     }

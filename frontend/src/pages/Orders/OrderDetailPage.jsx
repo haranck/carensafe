@@ -18,7 +18,9 @@ import { CONTAINER, FOCUS_RING, PAGE_BACKGROUND } from "../../constants/customer
 import { formatAddress } from "../../utils/address";
 import { formatPrice } from "../../utils/product";
 import { formatDate } from "../../utils/date";
-import { PAYMENT_METHOD_LABELS, daysLeft, formatDateTime, isPast } from "../../utils/order";
+import { UNPAID_CLOSED_STATUSES, daysLeft, formatDateTime, isPast, paymentMethodSummary } from "../../utils/order";
+import { formatPaise } from "../../utils/wallet";
+import { PendingPaymentBanner, UnpaidClosedBanner } from "../../components/Order/PaymentBanners";
 
 const CARD = "rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_4px_18px_-12px_rgba(59,42,138,0.18)] sm:p-6";
 const ORDER_ACTION = `inline-flex h-11 items-center justify-center gap-2 rounded-full border bg-white px-5 text-[14px] font-bold transition-colors ${FOCUS_RING}`;
@@ -80,6 +82,35 @@ const TrackingInfo = ({ tracking }) => {
           </p>
           <p className="mt-1 text-[14px] font-bold text-[#1e1a3a]">{formatDate(tracking.expectedDelivery)}</p>
         </div>
+      )}
+    </div>
+  );
+};
+
+// How it was paid (wallet / online split) and the Razorpay payment id for support
+const PaymentDetails = ({ order }) => {
+  const paymentId = order.razorpay?.paymentId;
+  const copyId = () =>
+    navigator.clipboard
+      ?.writeText(paymentId)
+      .then(() => toast.success("Payment id copied", { id: "payment-id-copied" }))
+      .catch(() => toast.error("Couldn't copy. Select the id instead.", { id: "payment-id-copied" }));
+
+  return (
+    <div className="mt-3 flex flex-col gap-1 text-[12.5px] text-slate-500">
+      <p>Payment: {paymentMethodSummary(order, formatPaise)}</p>
+      {paymentId && (
+        <p className="flex flex-wrap items-center gap-1">
+          Razorpay id <span className="break-all font-mono text-[12px] text-slate-700">{paymentId}</span>
+          <button
+            type="button"
+            onClick={copyId}
+            aria-label="Copy Razorpay payment id"
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-[#d6008a] hover:bg-[#fff5fa] ${FOCUS_RING}`}
+          >
+            <Copy size={14} aria-hidden="true" />
+          </button>
+        </p>
       )}
     </div>
   );
@@ -161,6 +192,17 @@ const OrderDetailPage = () => {
               Need help?
             </Link>
           </div>
+
+          {order.orderStatus === "pending_payment" && (
+            <div className="mt-5">
+              <PendingPaymentBanner order={order} />
+            </div>
+          )}
+          {UNPAID_CLOSED_STATUSES.includes(order.orderStatus) && (
+            <div className="mt-5">
+              <UnpaidClosedBanner order={order} />
+            </div>
+          )}
 
           <div className="mt-6">
             <TrackingStepper order={order} />
@@ -244,7 +286,7 @@ const OrderDetailPage = () => {
                   </p>
                 )
               )}
-              <p className="mt-3 text-[12.5px] text-slate-500">Payment: {PAYMENT_METHOD_LABELS[order.paymentMethod]}</p>
+              <PaymentDetails order={order} />
             </section>
           </div>
         </div>

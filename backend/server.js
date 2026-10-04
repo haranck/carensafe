@@ -2,6 +2,7 @@ const env = require('./src/config/envValidation');
 const mongoose = require('mongoose');
 const app = require('./src/app');
 const { redisClient } = require('./src/infrastructure/cache/redisClient');
+const { startPaymentJobs } = require('./src/jobs/payment.jobs');
 
 const PORT = env.PORT;
 
@@ -13,9 +14,15 @@ async function startServer() {
         await mongoose.connect(env.MONGO_URI);
         console.log('MongoDB connected successfully');
 
+        // Collections and indexes exist before any request, so none is created inside a transaction
+        await Promise.all(mongoose.modelNames().map((name) => mongoose.model(name).init()));
+        console.log(`Razorpay mode: ${env.RAZORPAY_MODE} · refunds to: ${env.REFUND_DESTINATION} · webhook: ${env.RAZORPAY_WEBHOOK_SECRET ? 'on' : 'off'}`);
+
         console.log('Connecting to Redis...');
         await redisClient.connect();
         console.log('Redis connected successfully');
+
+        startPaymentJobs();
 
         server = app.listen(PORT, () => {
             console.log(`CareNSafe server running on port ${PORT}`);

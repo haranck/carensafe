@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2, Mail, MapPin, Phone, Truck, User, XCircle } from "l
 import AdminOrderItems from "../../../components/Admin/Orders/AdminOrderItems";
 import AdminStatusPanel from "../../../components/Admin/Orders/AdminStatusPanel";
 import AdminCancelOrderModal from "../../../components/Admin/Orders/AdminCancelOrderModal";
+import AdminPaymentPanel from "../../../components/Admin/Orders/AdminPaymentPanel";
 import ReturnDecisionModal from "../../../components/Admin/Orders/ReturnDecisionModal";
 import OrderTimeline from "../../../components/Order/OrderTimeline";
 import { OrderStatusPill, PaymentStatusPill } from "../../../components/Order/OrderPills";
@@ -142,6 +143,8 @@ const AdminOrderDetailPage = () => {
           </section>
 
           <AdminStatusPanel order={order} />
+
+          <AdminPaymentPanel order={order} />
 
           {tracking?.courier && (
             <section className={`${ADMIN_CARD} p-5`}>

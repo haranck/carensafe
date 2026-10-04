@@ -1,0 +1,96 @@
+import { Atom, Droplets, Hexagon, Layers, Leaf, Magnet, ShieldCheck, Sparkles, Sprout, Sun, Wind } from "lucide-react";
+
+/**
+ * Care N Safe 11-in-1 technology. `tile`: full Tailwind class strings for the illustration tile (background gradient,
+ * icon colour and ring) — never built dynamically.
+ */
+export const TECHNOLOGIES = [
+  {
+    title: "100% Breathable Front & Back Sheets",
+    image: "/about/about1-feat-breathable.jpg",
+    icon: Wind,
+    points: ["Allows air circulation.", "Reduces moisture and heat build-up.", "Keeps skin cool and irritation-free."],
+    benefit: "Fresh, dry comfort even on long use.",
+    tile: { bg: "bg-gradient-to-br from-sky-100 via-sky-50 to-blue-200", icon: "text-sky-600", ring: "ring-sky-200" },
+  },
+  {
+    title: "Far Infrared (FIR) Technology",
+    image: "/about/about2-feat-infrared.jpg",
+    icon: Sun,
+    points: ["Responds to body warmth.", "Supports comfort and circulation."],
+    benefit: "Helps ease discomfort and supports a soothing feel.",
+    tile: { bg: "bg-gradient-to-br from-rose-950 via-red-800 to-rose-600", icon: "text-rose-100", ring: "ring-white/20" },
+  },
+  {
+    title: "Anion (Negative Ion) Layer",
+    image: "/about/about3-feat-anion.jpg",
+    icon: Atom,
+    points: ["Releases natural negative ions.", "Supports cleanliness by reducing odor-causing microbes."],
+    benefit: "Refreshing sensation and odor control.",
+    tile: { bg: "bg-gradient-to-br from-slate-100 via-zinc-50 to-slate-200", icon: "text-slate-600", ring: "ring-slate-200" },
+  },
+  {
+    title: "Nano Silver Layer",
+    image: "/about/about4-feat-nano.jpg",
+    icon: Sparkles,
+    points: ["Naturally antibacterial.", "Helps limit growth of harmful microbes on the pad surface."],
+    benefit: "Cleaner feel and extra hygiene support.",
+    tile: { bg: "bg-gradient-to-br from-blue-950 via-indigo-800 to-blue-600", icon: "text-blue-100", ring: "ring-white/20" },
+  },
+  {
+    title: "High Absorption SAP Core",
+    image: "/about/about5-feat-sap.jpg",
+    icon: Droplets,
+    points: ["Uses Japan Sumitomo SAP for efficient liquid locking.", "Rapid absorbency and excellent leak control."],
+    benefit: "Keeps surface dry and prevents leaks.",
+    tile: { bg: "bg-gradient-to-br from-cyan-100 via-sky-100 to-blue-300", icon: "text-blue-600", ring: "ring-sky-200" },
+  },
+  {
+    title: "9-Layer Protection System",
+    image: "/about/about6-feat-layers.jpg",
+    icon: Layers,
+    points: ["Multiple protective layers work together to prevent breakthroughs.", "Ensures maximum absorption and leak resistance."],
+    benefit: "Confidence even on heavy-flow days.",
+    tile: { bg: "bg-gradient-to-br from-pink-400 via-[#e0459f] to-[#d6008a]", icon: "text-white", ring: "ring-white/30" },
+  },
+  {
+    title: "Graphene Layer",
+    image: "/about/about7-feat-graphene.jpg",
+    icon: Hexagon,
+    points: ["Lightweight nano material.", "Improves flexibility and adaptability of the pad."],
+    benefit: "Strength and comfort without bulk.",
+    tile: { bg: "bg-gradient-to-br from-indigo-900 via-blue-800 to-sky-700", icon: "text-sky-200", ring: "ring-white/20" },
+  },
+  {
+    title: "Magnetic Comfort Layer",
+    image: "/about/about8-feat-magnetic.jpg",
+    icon: Magnet,
+    points: ["Gentle magnetic effect.", "Designed to support ease and comfort during wear."],
+    benefit: "Enhanced comfort sensation.",
+    tile: { bg: "bg-gradient-to-br from-teal-900 via-emerald-800 to-amber-600", icon: "text-amber-100", ring: "ring-white/20" },
+  },
+  {
+    title: "Tea Polyphenols (Green Tea Extract)",
+    image: "/about/about9-feat-tea.jpg",
+    icon: Leaf,
+    points: ["Natural antioxidants.", "Helps neutralize odor and inhibits bacterial growth."],
+    benefit: "Maintains a fresher feel and better intimate hygiene.",
+    tile: { bg: "bg-gradient-to-br from-lime-100 via-emerald-50 to-emerald-200", icon: "text-emerald-600", ring: "ring-emerald-200" },
+  },
+  {
+    title: "Chitosan Layer",
+    image: "/about/about10-feat-chitin.jpg",
+    icon: Sprout,
+    points: ["Natural bio-polymer.", "Helps manage odor and contributes to antimicrobial effects."],
+    benefit: "Added layer of gentle protection and freshness.",
+    tile: { bg: "bg-gradient-to-br from-emerald-100 via-green-50 to-lime-200", icon: "text-green-600", ring: "ring-green-200" },
+  },
+  {
+    title: "No Harmful Chemicals",
+    image: "/about/about11-feat-organic.jpg",
+    icon: ShieldCheck,
+    points: ["Free from harmful toxins, perfumes, bleach, or harsh additives.", "Verified with lab report claims."],
+    benefit: "Safer, gentle for most sensitive skin types.",
+    tile: { bg: "bg-gradient-to-br from-rose-100 via-pink-50 to-fuchsia-200", icon: "text-[#d6008a]", ring: "ring-pink-200" },
+  },
+];

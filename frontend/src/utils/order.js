@@ -11,6 +11,9 @@ export const ORDER_STATUS_LABELS = {
   return_requested: "Return requested",
   returned: "Returned",
   partially_returned: "Partially returned",
+  pending_payment: "Payment pending",
+  payment_failed: "Payment failed",
+  payment_expired: "Payment expired",
 };
 
 export const ORDER_STATUS_STYLES = {
@@ -24,7 +27,13 @@ export const ORDER_STATUS_STYLES = {
   return_requested: "border-amber-100 bg-amber-50 text-amber-700",
   returned: "border-slate-200 bg-slate-100 text-slate-700",
   partially_returned: "border-slate-200 bg-slate-100 text-slate-700",
+  pending_payment: "border-amber-100 bg-amber-50 text-amber-700",
+  payment_failed: "border-rose-100 bg-rose-50 text-rose-600",
+  payment_expired: "border-rose-100 bg-rose-50 text-rose-600",
 };
+
+// Orders closed before they were paid (no stock reserved, nothing charged / wallet part returned)
+export const UNPAID_CLOSED_STATUSES = ["payment_failed", "payment_expired"];
 
 export const ITEM_STATUS_LABELS = {
   active: "",
@@ -59,11 +68,21 @@ export const PAYMENT_STATUS_LABELS = {
   partially_refunded: "Partially refunded",
 };
 
-export const PAYMENT_METHOD_LABELS = { cod: "Cash on Delivery", razorpay: "Paid online" };
+export const PAYMENT_METHOD_LABELS = { cod: "Cash on Delivery", razorpay: "Online (Razorpay)", wallet: "Care N Safe Wallet" };
 
-// COD stays "pending" until delivery, which reads better as "Pay on delivery"
-export const paymentStatusLabel = (order) =>
-  order.paymentMethod === "cod" && order.paymentStatus === "pending" ? "Pay on delivery" : PAYMENT_STATUS_LABELS[order.paymentStatus] || "";
+// COD stays "pending" until delivery ("Pay on delivery"); an unpaid online order is "Awaiting payment"
+export const paymentStatusLabel = (order) => {
+  if (order.paymentStatus === "pending") return order.paymentMethod === "cod" ? "Pay on delivery" : "Awaiting payment";
+  return PAYMENT_STATUS_LABELS[order.paymentStatus] || "";
+};
+
+// "Wallet ₹100 + Online ₹350" for split payments, else the method name
+export const paymentMethodSummary = (order, formatPaise) => {
+  const walletPaise = order.payment?.walletPaise || 0;
+  const onlinePaise = order.payment?.onlinePaise || 0;
+  if (order.paymentMethod === "razorpay" && walletPaise > 0) return `Wallet ${formatPaise(walletPaise)} + Online ${formatPaise(onlinePaise)}`;
+  return PAYMENT_METHOD_LABELS[order.paymentMethod] || order.paymentMethod;
+};
 
 // Same values as config/orders.js CANCEL_REASONS (backend)
 export const CANCEL_REASONS = [
@@ -73,7 +92,13 @@ export const CANCEL_REASONS = [
   { value: "delivery_too_late", label: "Delivery is taking too long" },
   { value: "other", label: "Other" },
 ];
-export const cancelReasonLabel = (value) => CANCEL_REASONS.find((reason) => reason.value === value)?.label || value;
+// Reasons only the system sets
+const SYSTEM_CANCEL_REASONS = {
+  payment_not_completed: "Payment not completed",
+  out_of_stock_after_payment: "Out of stock after payment",
+};
+export const cancelReasonLabel = (value) =>
+  CANCEL_REASONS.find((reason) => reason.value === value)?.label || SYSTEM_CANCEL_REASONS[value] || value;
 
 // My Orders filter pills (config/orders.js STATUS_GROUPS)
 export const ORDER_FILTERS = [

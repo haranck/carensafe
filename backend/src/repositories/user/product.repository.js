@@ -141,6 +141,14 @@ class ProductRepository {
         return Product.findByIdAndDelete(productId);
     }
 
+    // Current stock of one variant (null if the product / variant is gone), inside a transaction when given
+    async findVariantStock(productId, variantId, session) {
+        const product = await Product.findOne({ _id: productId, 'variants._id': variantId }, { 'variants.$': 1 })
+            .session(session || null)
+            .lean();
+        return product ? product.variants[0].stock : null;
+    }
+
     // Takes `quantity` from a variant only while it has at least that much (modifiedCount 0 = not enough stock)
     decrementVariantStock(productId, variantId, quantity, session) {
         return Product.updateOne(

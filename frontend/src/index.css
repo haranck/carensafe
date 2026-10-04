@@ -53,6 +53,31 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* No sideways sliding: decorative shapes / glows that reach past the screen edge are cut off. `clip` doesn't create
+   a scroll container, so position: sticky and window scrolling keep working. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Older Safari (iOS 15 and below) ignores `clip` */
+@supports not (overflow-x: clip) {
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* iPhone / iPad zoom into any text field under 16px when it's tapped and stay zoomed, which makes the page look shifted
+   and slide sideways. 16px fields on iOS prevent that (unlayered, so it wins over the Tailwind text sizes). */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 body {
   font-family: var(--font-sans);
   background-color: #020917;

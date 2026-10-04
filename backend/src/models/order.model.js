@@ -37,7 +37,7 @@ const orderItemSchema = new mongoose.Schema({
     cancellation: {
         reason: { type: String, enum: CANCEL_REASONS },
         note: { type: String, trim: true },
-        cancelledBy: { type: String, enum: ['user', 'admin'] },
+        cancelledBy: { type: String, enum: ['user', 'admin', 'system'] },
         at: Date
     },
 
@@ -52,11 +52,17 @@ const orderItemSchema = new mongoose.Schema({
         receivedAt: Date
     },
 
-    // Online-paid orders only: what went back to the customer's wallet for this line (amount in PAISE)
+    // Prepaid orders only: what this line refunded (PAISE). The wallet-paid part always goes back to the wallet; the
+    // online-paid part goes to the wallet or the original method (REFUND_DESTINATION)
     refund: {
         amount: Number,
+        walletPaise: Number,
+        onlinePaise: Number,
+        onlineDestination: { type: String, enum: ['wallet', 'source'] },
+        onlineStatus: { type: String, enum: ['completed', 'pending', 'failed'] },
         creditedAt: Date,
-        walletTransaction: { type: mongoose.Schema.Types.ObjectId, ref: 'WalletTransaction' }
+        walletTransaction: { type: mongoose.Schema.Types.ObjectId, ref: 'WalletTransaction' },
+        razorpayRefundId: String
     }
 });
 
@@ -129,6 +135,23 @@ const orderSchema = new mongoose.Schema(
             required: true
         },
 
+        // How a prepaid order was paid and what went back, in PAISE (pricing stays in rupees)
+        payment: {
+            walletPaise: { type: Number, default: 0, min: 0 },
+            onlinePaise: { type: Number, default: 0, min: 0 },
+            refundedWalletPaise: { type: Number, default: 0, min: 0 },
+            refundedOnlinePaise: { type: Number, default: 0, min: 0 }
+        },
+
+        // The Payment document of the online part (audit trail of attempts and refunds)
+        paymentRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment' },
+
+        // Client checkout attempt id: the same key always returns the same order (unique per user)
+        idempotencyKey: { type: String },
+
+        // pending_payment only: when the reserved stock is released if still unpaid
+        expiresAt: Date,
+
         paymentStatus: {
             type: String,
             enum: PAYMENT_STATUSES,
@@ -154,11 +177,10 @@ const orderSchema = new mongoose.Schema(
         deliveredAt: Date,
         cancelledAt: Date,
 
-        // Filled by the Razorpay integration (online payments); empty for COD
+        // Online payments: the Razorpay order and the captured payment
         razorpay: {
             orderId: String,
-            paymentId: String,
-            signature: String
+            paymentId: String
         }
     },
     {
@@ -169,5 +191,13 @@ const orderSchema = new mongoose.Schema(
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ orderStatus: 1, createdAt: -1 });
 orderSchema.index({ 'items.status': 1 });
+// Expiry job: unpaid orders past their deadline
+orderSchema.index({ orderStatus: 1, expiresAt: 1 });
+// One order per checkout attempt (only orders that carry a key)
+orderSchema.index(
+    { user: 1, idempotencyKey: 1 },
+    { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } }
+);
+orderSchema.index({ 'razorpay.orderId': 1 }, { sparse: true });
 
 module.exports = mongoose.model('Order', orderSchema);

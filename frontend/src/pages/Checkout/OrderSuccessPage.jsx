@@ -10,7 +10,8 @@ import { FRONTEND_ROUTES, orderDetailPath } from "../../constants/frontendRoutes
 import { BRAND_GRADIENT, CONTAINER, FOCUS_RING, PAGE_BACKGROUND } from "../../constants/customerTheme";
 import { formatPrice } from "../../utils/product";
 import { formatAddress } from "../../utils/address";
-import { PAYMENT_METHOD_LABELS } from "../../utils/order";
+import { paymentMethodSummary } from "../../utils/order";
+import { formatPaise } from "../../utils/wallet";
 
 const SummaryRow = ({ label, valueClassName = "text-[#1e1a3a]", children }) => (
   <div className="flex justify-between gap-4">
@@ -76,7 +77,11 @@ const OrderSuccessPage = () => {
         <h1 id={headingId} className="mt-6 text-[28px] font-extrabold leading-tight tracking-tight text-[#1e1a3a] sm:text-[34px]">
           Order <span className="font-accent font-medium italic text-[#d6008a]">placed</span>
         </h1>
-        <p className="mt-2 text-[14px] text-slate-500">Thank you! We&apos;ll let you know when it ships.</p>
+        <p className="mt-2 text-[14px] text-slate-500">
+          {order.orderStatus === "pending_payment"
+            ? "We're waiting for your payment to be confirmed."
+            : "Thank you! We'll let you know when it ships."}
+        </p>
         <p className="mt-3 break-all rounded-full bg-[#fff5fa] px-4 py-1.5 text-[13px] font-bold text-[#d6008a]">{order.orderNumber}</p>
 
         <div className="mt-8 w-full rounded-2xl border border-slate-100 bg-white p-4 text-left shadow-[0_4px_18px_-12px_rgba(59,42,138,0.18)] sm:p-6">
@@ -117,7 +122,8 @@ const OrderSuccessPage = () => {
               <Wallet size={15} aria-hidden="true" className="mt-0.5 flex-shrink-0 text-[#d6008a]" />
               <span>
                 <span className="block font-bold text-[#1e1a3a]">Payment</span>
-                {PAYMENT_METHOD_LABELS[order.paymentMethod]} · {formatPrice(pricing.total)} on delivery
+                {paymentMethodSummary(order, formatPaise)} ·{" "}
+                {order.paymentMethod === "cod" ? `${formatPrice(pricing.total)} on delivery` : order.paymentStatus === "paid" ? "Paid" : "Awaiting payment"}
               </span>
             </p>
           </div>

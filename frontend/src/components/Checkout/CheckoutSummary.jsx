@@ -5,6 +5,7 @@ import { Leaf, Loader2, Lock, RotateCcw, ShieldCheck, Tag } from "lucide-react";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 import { BRAND_GRADIENT, FOCUS_RING } from "../../constants/customerTheme";
 import { formatPrice, productTitle } from "../../utils/product";
+import { formatPaise } from "../../utils/wallet";
 
 const TRUST_POINTS = [
   { icon: ShieldCheck, label: "Secure Checkout" },
@@ -49,7 +50,7 @@ const ItemRow = ({ item }) => {
  * Right column: items, coupon (dummy), totals (from checkoutTotals) and Place Order.
  * The button shows from lg up; on phones the sticky bottom bar has it. `blockedReason` says what's still missing.
  */
-const CheckoutSummary = ({ items, totals, canPlaceOrder, isPlacing, onPlaceOrder, blockedReason }) => {
+const CheckoutSummary = ({ items, totals, split, canPlaceOrder, isPlacing, onPlaceOrder, blockedReason, buttonLabel, busyLabel }) => {
   const headingId = useId();
   const couponId = useId();
   const [coupon, setCoupon] = useState("");
@@ -119,8 +120,24 @@ const CheckoutSummary = ({ items, totals, canPlaceOrder, isPlacing, onPlaceOrder
         <span className="text-[22px] font-extrabold text-[#1e1a3a]">{formatPrice(totals.total)}</span>
       </div>
 
+      {split?.walletPaise > 0 && (
+        <dl className="mt-3 flex flex-col gap-2 rounded-xl bg-[#fff5fa] px-3.5 py-3">
+          <Row label="Paid from wallet" valueClassName="text-emerald-600">
+            − {formatPaise(split.walletPaise)}
+          </Row>
+          {split.onlinePaise > 0 && <Row label="Pay online">{formatPaise(split.onlinePaise)}</Row>}
+        </dl>
+      )}
+
       <div className="hidden lg:block">
-        <PlaceOrderButton canPlaceOrder={canPlaceOrder} isPlacing={isPlacing} onPlaceOrder={onPlaceOrder} className="mt-5 w-full" />
+        <PlaceOrderButton
+          canPlaceOrder={canPlaceOrder}
+          isPlacing={isPlacing}
+          onPlaceOrder={onPlaceOrder}
+          label={buttonLabel}
+          busyLabel={busyLabel}
+          className="mt-5 w-full"
+        />
         {blockedReason && <p className="mt-2 text-center text-[12px] text-slate-500">{blockedReason}</p>}
       </div>
 
@@ -138,7 +155,7 @@ const CheckoutSummary = ({ items, totals, canPlaceOrder, isPlacing, onPlaceOrder
   );
 };
 
-export const PlaceOrderButton = ({ canPlaceOrder, isPlacing, onPlaceOrder, className = "" }) => (
+export const PlaceOrderButton = ({ canPlaceOrder, isPlacing, onPlaceOrder, label = "Place Order", busyLabel = "Placing order…", className = "" }) => (
   <button
     type="button"
     onClick={onPlaceOrder}
@@ -146,7 +163,7 @@ export const PlaceOrderButton = ({ canPlaceOrder, isPlacing, onPlaceOrder, class
     className={`inline-flex h-12 items-center justify-center gap-2 rounded-full px-6 text-[15px] font-bold text-white ${BRAND_GRADIENT} shadow-[0_6px_18px_rgba(124,58,237,0.28)] hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none transition-all duration-200 ${FOCUS_RING} ${className}`}
   >
     {isPlacing ? <Loader2 size={18} aria-hidden="true" className="animate-spin" /> : <Lock size={16} aria-hidden="true" />}
-    {isPlacing ? "Placing order…" : "Place Order"}
+    {isPlacing ? busyLabel : label}
   </button>
 );
 

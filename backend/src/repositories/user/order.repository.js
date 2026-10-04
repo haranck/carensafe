@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
 const Order = require('../../models/order.model');
 
 const CUSTOMER_FIELDS = 'firstName lastName email phone';
@@ -7,11 +6,6 @@ const LIST_PROJECTION = { statusHistory: 0, razorpay: 0 };
 
 // Shared by the user order service and the admin order service
 class OrderRepository {
-    // Runs `work(session)` in a transaction (Atlas replica set); retried by the driver on transient errors
-    runInTransaction(work) {
-        return mongoose.connection.transaction(work);
-    }
-
     async create(orderData, session) {
         const [order] = await Order.create([orderData], { session });
         return order.toObject();
@@ -19,6 +13,16 @@ class OrderRepository {
 
     existsByNumber(orderNumber) {
         return Order.exists({ orderNumber });
+    }
+
+    // The order a checkout attempt already created (same user + client idempotency key)
+    findByIdempotencyKey(userId, idempotencyKey, session) {
+        return Order.findOne({ user: userId, idempotencyKey }).session(session || null).lean();
+    }
+
+    // Unpaid online orders past their payment deadline (expiry job), oldest first
+    findExpiredPending(now, limit = 20) {
+        return Order.find({ orderStatus: 'pending_payment', expiresAt: { $lt: now } }).sort({ expiresAt: 1 }).limit(limit).lean();
     }
 
     // Scoped to the user: another user's order id simply isn't found
@@ -32,6 +36,15 @@ class OrderRepository {
 
     findByIdWithCustomer(orderId) {
         return Order.findById(orderId).populate('user', CUSTOMER_FIELDS).lean();
+    }
+
+    // A source refund of one line moved on (pending → completed / failed)
+    updateItemRefundStatus(orderId, itemId, { status, refundId }, session) {
+        return Order.updateOne(
+            { _id: orderId, 'items._id': itemId },
+            { $set: { 'items.$.refund.onlineStatus': status, ...(refundId && { 'items.$.refund.razorpayRefundId': refundId }) } },
+            { session }
+        );
     }
 
     // Saves the recomputed parts of an order only if nobody changed it since it was read (updatedAt still matches);
