@@ -16,6 +16,10 @@ const addToWishlistSchema = Joi.object({
 
 const productIdSchema = objectId('product').required();
 
+const moveToCartSchema = Joi.object({
+    variantId: objectId('variant').required()
+});
+
 const wishlistQuerySchema = Joi.object({
     page: Joi.number().integer().min(1).messages({
         'number.base': 'Page must be a number.',
@@ -52,4 +56,12 @@ const validateWishlistQuery = (req, res, next) => {
     next();
 };
 
-module.exports = { validateAddToWishlist, validateWishlistProductId, validateWishlistQuery };
+const validateMoveToCart = (req, res, next) => {
+    const { error } = moveToCartSchema.validate(req.body || {});
+    if (error) {
+        return res.status(400).json({ success: false, message: error.details[0].message });
+    }
+    next();
+};
+
+module.exports = { validateAddToWishlist, validateWishlistProductId, validateWishlistQuery, validateMoveToCart };

@@ -2,7 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, m } from "framer-motion";
 import { ChevronDown, LogOut } from "lucide-react";
-import { ACCOUNT_LINKS, FOCUS_RING, getInitials } from "./navConfig";
+import { ACCOUNT_LINKS, FOCUS_RING } from "./navConfig";
+import UserAvatar from "../../common/UserAvatar";
 
 const UserMenu = ({ user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -45,12 +46,7 @@ const UserMenu = ({ user, onLogout }) => {
         aria-label={`Account menu for ${firstName}`}
         className={`flex items-center gap-2 h-10 pl-1 pr-2.5 rounded-full hover:bg-violet-50 transition-colors duration-200 ${FOCUS_RING}`}
       >
-        <span
-          aria-hidden="true"
-          className="w-8 h-8 rounded-full bg-gradient-to-br from-[#3b2a8a] via-[#7c3aed] to-[#d6008a] text-white text-[12px] font-bold flex items-center justify-center"
-        >
-          {getInitials(user)}
-        </span>
+        <UserAvatar user={user} className="w-8 h-8 text-[12px]" />
         <span className="hidden xl:inline max-w-[88px] truncate text-[13.5px] font-semibold text-[#1e1a3a]">{firstName}</span>
         <ChevronDown
           size={14}

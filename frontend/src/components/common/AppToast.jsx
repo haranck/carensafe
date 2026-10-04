@@ -5,7 +5,11 @@ import { CheckCircle2, CircleAlert, Loader2, X } from "lucide-react";
 const TYPE_ICONS = {
   success: { Icon: CheckCircle2, circle: "bg-emerald-400/15 text-emerald-300" },
   error: { Icon: CircleAlert, circle: "bg-rose-400/15 text-rose-300" },
-  loading: { Icon: Loader2, circle: "bg-violet-400/15 text-violet-300", spin: true },
+  loading: {
+    Icon: Loader2,
+    circle: "bg-violet-400/15 text-violet-300",
+    spin: true,
+  },
 };
 const CUSTOM_ICON_CIRCLE = "bg-pink-400/15 text-pink-300";
 
@@ -19,33 +23,73 @@ const AppToast = ({ t }) => {
   const preset = TYPE_ICONS[t.type];
   let icon = null;
   if (t.icon) {
-    icon = <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${CUSTOM_ICON_CIRCLE}`}>{t.icon}</span>;
+    icon = (
+      <span
+        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${CUSTOM_ICON_CIRCLE}`}
+      >
+        {t.icon}
+      </span>
+    );
   } else if (preset) {
     icon = (
-      <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${preset.circle}`}>
-        <preset.Icon size={18} strokeWidth={2.4} aria-hidden="true" className={preset.spin ? "animate-spin" : ""} />
+      <span
+        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${preset.circle}`}
+      >
+        <preset.Icon
+          size={18}
+          strokeWidth={2.4}
+          aria-hidden="true"
+          className={preset.spin ? "animate-spin" : ""}
+        />
       </span>
     );
   }
 
+  // return (
+  //   <div
+  //     {...t.ariaProps}
+  //     className={`w-full max-w-[420px] rounded-2xl bg-gradient-to-r from-[#d6008a] via-[#7c3aed] to-[#3b82f6] p-px shadow-[0_18px_40px_-14px_rgba(30,26,58,0.6)] transition-[opacity,translate] duration-200 ease-out starting:-translate-y-3 starting:opacity-0 motion-reduce:transition-none ${
+  //       t.visible ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
+  //     }`}
+  //   >
+  //     <div className="flex items-center gap-3 rounded-[15px] bg-[#16122e] py-2.5 pr-1.5 pl-3 font-sans text-white">
+  //       {icon}
+  //       <div className="min-w-0 flex-1 py-1.5 text-[13.5px] font-medium leading-snug break-words text-white/95">
+  //         {resolveValue(t.message, t)}
+  //       </div>
+  //       {t.type !== "loading" && (
+  //         <button
+  //           type="button"
+  //           onClick={() => toast.dismiss(t.id)}
+  //           aria-label="Dismiss notification"
+  //           className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-white/45 hover:bg-white/10 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300/60"
+  //         >
+  //           <X size={16} aria-hidden="true" />
+  //         </button>
+  //       )}
+  //     </div>
+  //   </div>
+  // );
   return (
     <div
       {...t.ariaProps}
-      className={`w-full max-w-[420px] rounded-2xl bg-gradient-to-r from-[#d6008a] via-[#7c3aed] to-[#3b82f6] p-px shadow-[0_18px_40px_-14px_rgba(30,26,58,0.6)] transition-[opacity,translate] duration-200 ease-out starting:-translate-y-3 starting:opacity-0 motion-reduce:transition-none ${
+      className={`w-full max-w-[420px] rounded-2xl bg-gradient-to-r from-[#d6008a] via-[#ec4899] to-[#7c3aed] p-[2px] transition-[opacity,translate] duration-200 ease-out starting:-translate-y-3 starting:opacity-0 motion-reduce:transition-none ${
         t.visible ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
       }`}
     >
-      <div className="flex items-center gap-3 rounded-[15px] bg-[#16122e] py-2.5 pr-1.5 pl-3 font-sans text-white">
+      <div className="flex items-center gap-3 rounded-[14px] bg-white py-2.5 pr-1.5 pl-3 font-sans text-[#1f2937]">
         {icon}
-        <div className="min-w-0 flex-1 py-1.5 text-[13.5px] font-medium leading-snug break-words text-white/95">
+
+        <div className="min-w-0 flex-1 py-1.5 text-[13.5px] font-medium leading-snug break-words text-[#1f2937]">
           {resolveValue(t.message, t)}
         </div>
+
         {t.type !== "loading" && (
           <button
             type="button"
             onClick={() => toast.dismiss(t.id)}
             aria-label="Dismiss notification"
-            className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-white/45 hover:bg-white/10 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300/60"
+            className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-pink-50 hover:text-pink-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300/60"
           >
             <X size={16} aria-hidden="true" />
           </button>

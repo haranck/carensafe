@@ -17,6 +17,12 @@ export const addToWishlist = async ({ productId, variantId }) => {
     return response.data;
 };
 
+// Adds one to the cart, then removes the product from the wishlist
+export const moveWishlistItemToCart = async ({ productId, variantId }) => {
+    const response = await AxiosInstance.post(API_ROUTES.WISHLIST.MOVE_TO_CART(productId), { variantId });
+    return response.data;
+};
+
 export const removeFromWishlist = async (productId) => {
     const response = await AxiosInstance.delete(API_ROUTES.WISHLIST.REMOVE(productId));
     return response.data;

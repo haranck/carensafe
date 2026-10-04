@@ -34,7 +34,7 @@ const SimilarProducts = ({ productId }) => {
           <ProductCarousel label="Similar products">
             {isLoading
               ? Array.from({ length: SKELETON_COUNT }, (_, i) => <ProductCardSkeleton key={i} />)
-              : items.map((item) => <ProductCard key={item._id} item={item} />)}
+              : items.map((item) => <ProductCard key={`${item._id}-${item.defaultVariant._id}`} item={item} />)}
           </ProductCarousel>
         )}
       </div>

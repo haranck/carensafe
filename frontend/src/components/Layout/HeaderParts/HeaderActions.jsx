@@ -4,6 +4,7 @@ import UserMenu from "./UserMenu";
 import HeaderSearchBar from "./HeaderSearchBar";
 import { FRONTEND_ROUTES } from "../../../constants/frontendRoutes";
 import { useWishlistIds } from "../../../hooks/Wishlist/WishlistHooks";
+import { useCartCount } from "../../../hooks/Cart/CartHooks";
 import { BRAND_GRADIENT, FOCUS_RING } from "./navConfig";
 
 const ICON_BUTTON = `relative items-center justify-center w-10 h-10 rounded-full text-slate-600 hover:text-[#d6008a] hover:bg-pink-50 transition-colors duration-200 ${FOCUS_RING}`;
@@ -28,8 +29,7 @@ const HeaderActions = ({
   onOpenDrawer,
   onLogout,
 }) => {
-  // TODO: replace with the useGetCart() count once the cart API exists
-  const cartCount = 0;
+  const { data: cartCount = 0 } = useCartCount();
   const { data: wishlistIds } = useWishlistIds();
   const wishlistCount = wishlistIds?.size || 0;
 

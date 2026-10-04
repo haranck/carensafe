@@ -3,6 +3,7 @@ const passwordUtil = require('../../../utils/password');
 const otpUtil = require('../../../utils/otp');
 const redisUtil = require('../../../utils/redis');
 const jwtUtil = require('../../../utils/jwt');
+const googleUtil = require('../../../utils/google');
 const emailService = require('./email.service');
 
 class AuthService {
@@ -174,6 +175,13 @@ class AuthService {
             throw error;
         }
 
+        // Google-only accounts have no password (bcrypt.compare would throw)
+        if (!user.password) {
+            const error = new Error('This account uses Google sign-in. Please continue with Google.');
+            error.statusCode = 400;
+            throw error;
+        }
+
         const isPasswordValid = await passwordUtil.compare(password, user.password);
         if (!isPasswordValid) {
             const error = new Error('Invalid email or password');
@@ -190,6 +198,81 @@ class AuthService {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
+                avatarUrl: user.avatarUrl,
+                isAdmin: user.isAdmin
+            },
+            accessToken,
+            refreshToken
+        };
+    }
+
+    async googleLogin(code) {
+        // Only the verified id_token payload is trusted, never profile data from the client
+        const payload = await googleUtil.verifyGoogleCode(code);
+
+        if (!payload.email || !payload.email_verified) {
+            const error = new Error('Your Google email is not verified.');
+            error.statusCode = 401;
+            throw error;
+        }
+
+        const normalizedEmail = payload.email.trim().toLowerCase();
+
+        let user = await userRepository.findByGoogleId(payload.sub);
+        if (!user) {
+            user = await userRepository.findByEmail(normalizedEmail);
+        }
+
+        if (user) {
+            if (user.isAdmin) {
+                const error = new Error('Admins are not allowed to log in from the user portal.');
+                error.statusCode = 403;
+                throw error;
+            }
+
+            if (user.isBlocked) {
+                const error = new Error('Your account is blocked.');
+                error.statusCode = 403;
+                throw error;
+            }
+
+            if (user.googleId && user.googleId !== payload.sub) {
+                const error = new Error('This email is linked to a different Google account.');
+                error.statusCode = 409;
+                throw error;
+            }
+
+            // Existing email account: link Google (accounts with a password stay 'local' and keep password login)
+            if (!user.googleId) {
+                const updateData = { googleId: payload.sub };
+                if (!user.password) updateData.authProvider = 'google';
+                if (!user.avatarUrl && payload.picture) updateData.avatarUrl = payload.picture;
+
+                user = await userRepository.updateById(user._id, updateData);
+            }
+        } else {
+            // New user: Google already verified the email, so no OTP step
+            user = await userRepository.create({
+                firstName: payload.given_name || payload.name || normalizedEmail.split('@')[0],
+                lastName: payload.family_name,
+                email: normalizedEmail,
+                googleId: payload.sub,
+                authProvider: 'google',
+                avatarUrl: payload.picture,
+                isAdmin: false
+            });
+        }
+
+        const accessToken = jwtUtil.generateAccessToken(user);
+        const refreshToken = jwtUtil.generateRefreshToken(user);
+
+        return {
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                avatarUrl: user.avatarUrl,
                 isAdmin: user.isAdmin
             },
             accessToken,
@@ -256,7 +339,7 @@ class AuthService {
             throw error;
         }
         if (user.isBlocked) {
-            const error = new Error('Your account is blocked');
+            const error = new Error('Your account is blocked.');
             error.statusCode = 403;
             throw error;
         }
@@ -271,6 +354,23 @@ class AuthService {
         const newRefreshToken = jwtUtil.generateRefreshToken(user);
 
         return { accessToken, refreshToken: newRefreshToken };
+    }
+
+    // authMiddleware, on every protected request: deleted or blocked accounts lose access straight away,
+    // not when their access token expires
+    async verifyActiveUser(userId) {
+        const user = await userRepository.findStatusById(userId);
+        if (!user) {
+            const error = new Error('User no longer exists.');
+            error.statusCode = 401;
+            throw error;
+        }
+
+        if (user.isBlocked) {
+            const error = new Error('Your account is blocked.');
+            error.statusCode = 403;
+            throw error;
+        }
     }
 
     async logout(refreshToken) {

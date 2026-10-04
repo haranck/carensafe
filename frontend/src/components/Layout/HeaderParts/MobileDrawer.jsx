@@ -8,9 +8,9 @@ import {
   ACCOUNT_LINKS,
   BRAND_GRADIENT,
   FOCUS_RING,
-  getInitials,
   resolveNavPath,
 } from "./navConfig";
+import UserAvatar from "../../common/UserAvatar";
 
 const SectionTitle = ({ children }) => (
   <p className="px-3 mb-1.5 text-[10.5px] font-bold uppercase tracking-widest text-slate-400">{children}</p>
@@ -106,12 +106,7 @@ const MobileDrawer = ({ id, isLoggedIn, user, onClose, onLogout }) => {
 
           {isLoggedIn && (
             <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-violet-50 to-pink-50 border border-violet-100">
-              <span
-                aria-hidden="true"
-                className="w-11 h-11 flex-shrink-0 rounded-full bg-gradient-to-br from-[#3b2a8a] via-[#7c3aed] to-[#d6008a] text-white text-[14px] font-bold flex items-center justify-center"
-              >
-                {getInitials(user)}
-              </span>
+              <UserAvatar user={user} className="w-11 h-11 text-[14px]" />
               <div className="min-w-0">
                 <p className="text-[14.5px] font-bold text-[#1e1a3a] truncate">{fullName}</p>
                 {user?.email && <p className="text-[12px] text-slate-500 truncate">{user.email}</p>}

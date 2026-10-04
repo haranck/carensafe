@@ -23,51 +23,35 @@ class ProductRepository {
         return Product.find({ isActive: true }).sort({ createdAt: -1 });
     }
 
+    // One card per active variant that passes `variantFilter` (an expression on `$$v`), so every size/pack is
+    // listed on its own with its own price, stock and images
     async findActiveProductsPaginated({ match = {}, variantFilter = true, sort = { createdAt: -1, _id: 1 }, page = 1, limit = 12 }) {
         const skip = (page - 1) * limit;
         const [result] = await Product.aggregate([
             { $match: { isActive: true, ...match } },
-            {
-                $addFields: {
-                    activeVariants: { $filter: { input: '$variants', as: 'v', cond: { $eq: ['$$v.isActive', true] } } }
-                }
-            },
-            {
-                $addFields: {
-                    matchingVariants: { $filter: { input: '$activeVariants', as: 'v', cond: variantFilter } }
-                }
-            },
-            { $match: { 'matchingVariants.0': { $exists: true } } },
-            {
-                $addFields: {
-                    inStockVariants: { $filter: { input: '$matchingVariants', as: 'v', cond: { $gt: ['$$v.stock', 0] } } }
-                }
-            },
+            { $unwind: '$variants' },
+            { $match: { 'variants.isActive': true } },
+            { $match: { $expr: { $let: { vars: { v: '$variants' }, in: variantFilter } } } },
             {
                 $project: {
                     name: 1,
                     createdAt: 1,
-                    minPrice: { $min: '$matchingVariants.price' },
-                    maxPrice: { $max: '$matchingVariants.price' },
-                    sizes: '$activeVariants.size',
-                    inStock: { $gt: [{ $size: '$inStockVariants' }, 0] },
-                    // First in-stock matching variant, else the first matching one
+                    minPrice: '$variants.price',
+                    maxPrice: '$variants.price',
+                    sizes: ['$variants.size'],
+                    inStock: { $gt: ['$variants.stock', 0] },
                     defaultVariant: {
-                        $let: {
-                            vars: { dv: { $arrayElemAt: [{ $concatArrays: ['$inStockVariants', '$matchingVariants'] }, 0] } },
-                            in: {
-                                _id: '$$dv._id',
-                                name: '$$dv.name',
-                                size: '$$dv.size',
-                                price: '$$dv.price',
-                                stock: '$$dv.stock',
-                                images: { $slice: ['$$dv.images.url', 2] }
-                            }
-                        }
+                        _id: '$variants._id',
+                        name: '$variants.name',
+                        size: '$variants.size',
+                        price: '$variants.price',
+                        stock: '$variants.stock',
+                        images: { $slice: ['$variants.images.url', 2] }
                     }
                 }
             },
-            { $sort: sort },
+            // Variants of one product share its _id: keep their order stable across pages
+            { $sort: { ...sort, 'defaultVariant._id': 1 } },
             {
                 $facet: {
                     data: [{ $skip: skip }, { $limit: limit }],
@@ -83,6 +67,15 @@ class ProductRepository {
     findActiveForFilters() {
         return Product.find({ isActive: true })
             .select('name variants.size variants.price variants.isActive')
+            .lean();
+    }
+
+    // Newest active products with their variants (cart recommendations)
+    findActiveNewest(limit) {
+        return Product.find({ isActive: true })
+            .sort({ createdAt: -1, _id: 1 })
+            .limit(limit)
+            .select('name isActive createdAt variants')
             .lean();
     }
 

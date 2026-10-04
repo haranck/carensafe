@@ -19,6 +19,16 @@ export const formatPriceRange = (minPrice, maxPrice) => {
 // Admin-created variant names can contain double spaces ("Combo Pack  Normal Flow")
 export const cleanName = (name = "") => name.replace(/\s+/g, " ").trim();
 
+// "Product name + variant name". Admin variant names usually start with the product name already
+// ("CareNSafe Premium Cotton XL Sanitary Pads"), so it's never repeated.
+export const productTitle = (productName = "", variantName = "") => {
+    const product = cleanName(productName || "");
+    const variant = cleanName(variantName || "");
+    if (!variant) return product;
+    if (!product || variant.toLowerCase().startsWith(product.toLowerCase())) return variant;
+    return `${product} ${variant}`;
+};
+
 export const isComboItem = (item) => Boolean(item?.isCombo);
 
 // Every badge the data supports, highest priority first. `price` is the price on show (card default variant

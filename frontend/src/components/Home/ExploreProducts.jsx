@@ -78,7 +78,7 @@ const ExploreProducts = () => {
       <>
         <div className={`${GRID} transition-opacity duration-200 ${isPlaceholderData ? "opacity-60" : "opacity-100"}`}>
           {items.map((item) => (
-            <ProductCard key={item._id} item={item} />
+            <ProductCard key={`${item._id}-${item.defaultVariant._id}`} item={item} />
           ))}
         </div>
         <div className="mt-8 flex flex-col items-center gap-3">

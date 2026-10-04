@@ -29,8 +29,8 @@ AxiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Skip token refresh for auth endpoints (login, signup, verify-otp, resend-otp)
-    const authPaths = ["/login", "/signup", "/verify-otp", "/resend-otp"];
+    // Skip token refresh for auth endpoints (login, signup, verify-otp, resend-otp, google)
+    const authPaths = ["/login", "/signup", "/verify-otp", "/resend-otp", "/google"];
     const isAuthRoute = authPaths.some((path) => originalRequest.url?.includes(path));
 
     if (status === 401 && !originalRequest._retry && !isAuthRoute) {

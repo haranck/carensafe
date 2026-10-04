@@ -6,7 +6,7 @@ import { useCartActions } from "../../hooks/Cart/CartHooks";
 import { usePrefetchProduct } from "../../hooks/Products/ProductHooks";
 import { productDetailPath } from "../../constants/frontendRoutes";
 import { cloudinaryUrl, cloudinarySrcSet } from "../../utils/cloudinary";
-import { cleanName, formatPrice, getProductBadge, isComboItem, FREE_DELIVERY_MIN, LOW_STOCK_LIMIT } from "../../utils/product";
+import { formatPrice, getProductBadge, isComboItem, productTitle, FREE_DELIVERY_MIN, LOW_STOCK_LIMIT } from "../../utils/product";
 import { BRAND_GRADIENT, FOCUS_RING, PINK_BUTTON } from "../../constants/customerTheme";
 
 const BADGE_STYLES = {
@@ -201,8 +201,8 @@ const ProductCard = ({ item, layout = "grid", mode = "shop", onRemove }) => {
   const isAvailable = item.isAvailable !== false;
   const variant = item.defaultVariant;
   const [image, hoverImage] = variant.images || [];
-  // A product deleted from the catalogue has no name left
-  const name = cleanName(item.name) || "Unavailable product";
+  // Product + variant name; a product deleted from the catalogue has no name left
+  const name = productTitle(item.name, variant.name) || "Unavailable product";
   const inStock = item.inStock;
   const badge = isAvailable ? getProductBadge({ ...item, price: variant.price }) : null;
   const detailPath = productDetailPath(item._id, variant._id);
@@ -220,7 +220,7 @@ const ProductCard = ({ item, layout = "grid", mode = "shop", onRemove }) => {
     stopCardClick(e);
     buyNow(lineItem);
   };
-  // Cart stub until the cart API exists: the item stays in the wishlist (see useCartActions)
+  // Adds one to the cart, then removes it from the wishlist (see useCartActions)
   const handleMove = (e) => {
     stopCardClick(e);
     moveToCart(lineItem);

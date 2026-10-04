@@ -14,6 +14,7 @@ export const FRONTEND_ROUTES = {
   ABOUT: "/about",
   CONTACT: "/contact",
   CART: "/cart",
+  CHECKOUT: "/checkout",
   WISHLIST: "/wishlist",
   ORDERS: "/orders",
   PROFILE: "/profile",

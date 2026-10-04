@@ -1,5 +1,6 @@
 const wishlistRepository = require('../../../repositories/user/wishlist.repository');
 const productRepository = require('../../../repositories/user/product.repository');
+const cartRepository = require('../../../repositories/user/cart.repository');
 const productsService = require('../products/products.service');
 
 const MAX_WISHLIST_ITEMS = 100;
@@ -75,10 +76,9 @@ class WishlistService {
         }
     }
 
-    // TODO: once the cart API exists, return true when the user's cart has this product (and variant, if given).
-    // Kept async so the cart repository lookup can drop straight in.
+    // True when the user's cart has this product (and variant, if given)
     async isInCart(userId, productId, variantId) {
-        return false;
+        return Boolean(await cartRepository.hasItem(userId, productId, variantId));
     }
 }
 

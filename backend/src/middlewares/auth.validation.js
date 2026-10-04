@@ -27,6 +27,14 @@ const loginSchema = Joi.object({
     })
 });
 
+const googleAuthSchema = Joi.object({
+    code: Joi.string().trim().required().messages({
+        'string.base': 'Google authorization code is required.',
+        'string.empty': 'Google authorization code is required.',
+        'any.required': 'Google authorization code is required.'
+    })
+});
+
 const validateSignup = (req, res, next) => {
     const { error } = signupSchema.validate(req.body);
     if (error) {
@@ -43,4 +51,12 @@ const validateLogin = (req, res, next) => {
     next();
 };
 
-module.exports = { validateSignup, validateLogin };
+const validateGoogleAuth = (req, res, next) => {
+    const { error } = googleAuthSchema.validate(req.body || {});
+    if (error) {
+        return res.status(400).json({ success: false, message: error.details[0].message });
+    }
+    next();
+};
+
+module.exports = { validateSignup, validateLogin, validateGoogleAuth };

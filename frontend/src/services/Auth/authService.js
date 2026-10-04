@@ -33,6 +33,14 @@ export const loginUser = async (data) => {
     return response.data;
 };
 
+export const googleLogin = async (code) => {
+    const response = await AxiosInstance.post(
+        API_ROUTES.AUTH.GOOGLE,
+        { code }
+    );
+    return response.data;
+};
+
 export const adminLogin = async (data) => {
     const response = await AxiosInstance.post(
         API_ROUTES.ADMIN_AUTH.LOGIN,

@@ -4,6 +4,7 @@ export const API_ROUTES = {
         VERIFY_OTP: "/user/auth/verify-otp",
         RESEND_OTP: "/user/auth/resend-otp",
         LOGIN: "/user/auth/login",
+        GOOGLE: "/user/auth/google",
         LOGOUT: "/user/auth/logout",
     },
     PRODUCTS: {
@@ -17,6 +18,17 @@ export const API_ROUTES = {
         IDS: "/user/wishlist/ids",
         ADD: "/user/wishlist",
         REMOVE: (productId) => `/user/wishlist/${productId}`,
+        MOVE_TO_CART: (productId) => `/user/wishlist/${productId}/move-to-cart`,
+    },
+    CART: {
+        GET: "/user/cart",
+        COUNT: "/user/cart/count",
+        RECOMMENDATIONS: "/user/cart/recommendations",
+        ADD_ITEM: "/user/cart/items",
+        UPDATE_ITEM: (itemId) => `/user/cart/items/${itemId}`,
+        REMOVE_ITEM: (itemId) => `/user/cart/items/${itemId}`,
+        MOVE_TO_WISHLIST: (itemId) => `/user/cart/items/${itemId}/move-to-wishlist`,
+        CLEAR: "/user/cart",
     },
     ADMIN_AUTH: {
         LOGIN: "/admin/auth/login",

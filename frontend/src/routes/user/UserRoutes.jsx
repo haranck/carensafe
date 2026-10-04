@@ -19,6 +19,7 @@ const HomePage = lazy(loadHomePage);
 const ShopPage = lazy(loadShopPage);
 const ProductDetailPage = lazy(loadProductDetailPage);
 const WishlistPage = lazy(() => import("../../pages/Wishlist/WishlistPage"));
+const CartPage = lazy(() => import("../../pages/Cart/CartPage"));
 const ComingSoonPage = lazy(() => import("../../pages/ComingSoon/ComingSoonPage"));
 
 // Download the lazy pages' code while the browser is idle, so moving between pages never waits on it
@@ -62,7 +63,8 @@ const UserRoutes = () => {
                 {/* Account pages: guests get the login toast, log in, then come back here */}
                 <Route element={<ProtectedRoute />}>
                     <Route path={FRONTEND_ROUTES.WISHLIST} element={<WishlistPage />} />
-                    <Route path={FRONTEND_ROUTES.CART} element={<ComingSoonPage />} />
+                    <Route path={FRONTEND_ROUTES.CART} element={<CartPage />} />
+                    <Route path={FRONTEND_ROUTES.CHECKOUT} element={<ComingSoonPage />} />
                     <Route path={FRONTEND_ROUTES.ORDERS} element={<ComingSoonPage />} />
                     <Route path={FRONTEND_ROUTES.PROFILE} element={<ComingSoonPage />} />
                     <Route path={FRONTEND_ROUTES.REWARDS} element={<ComingSoonPage />} />

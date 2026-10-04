@@ -38,7 +38,8 @@ app.js mount → routes → middlewares → controller → service → repositor
                 (validation/upload/auth)   (req/res)   (logic)    (Mongoose)
 ```
 
-Mounted in `src/app.js`: `/api/user/auth`, `/api/admin/auth`, `/api/admin/users`, `/api/admin/products`.
+Mounted in `src/app.js`: `/api/user/auth`, `/api/user/products`, `/api/user/wishlist`, `/api/user/cart`,
+`/api/admin/auth`, `/api/admin/users`, `/api/admin/products`.
 `globalErrorHandler` is registered last.
 
 > The `user/user` feature files (`user.routes.js`, `user.controller.js`, `user.service.js`) are **empty**.
@@ -100,7 +101,7 @@ res.status(200).json({ success: true, message, data: result.data,
 res.status(statusCode).json({ success: false, message });
 ```
 201 for creates. Never send `password` or `refreshToken` in a body. Login returns
-`data: { user: { id, firstName, lastName, email, isAdmin }, accessToken }` plus an httpOnly
+`data: { user: { id, firstName, lastName, email, avatarUrl, isAdmin }, accessToken }` plus an httpOnly
 `refreshToken` cookie (`sameSite: 'strict'`, `secure` in production, `maxAge: env.REFRESH_TOKEN_MAX_AGE`).
 
 ### Errors
@@ -127,9 +128,10 @@ forwards rejected promises). Same JSON shape. Keep the controller try/catch patt
 - `utils/jwt.js` signs `{ userId }` (there are no roles; admins are `isAdmin: true`). Access token 15m, refresh 7d. Refresh rotation and logout
   blacklist the old token in Redis (`blacklist:<token>`).
 - `middlewares/auth.middleware.js` (default export) expects `Authorization: Bearer <token>`, verifies it and sets
-  **`req.user = { userId }`**. 401 `{ success:false, message }` otherwise. It does **not**
-  check `isBlocked` or `isAdmin`. It's currently not mounted anywhere (see Known issues). Protect new user
-  routes with it: `router.get('/', authMiddleware, (req, res) => ...)` and read `req.user.userId`.
+  **`req.user = { userId }`**. 401 `{ success:false, message }` otherwise. On every request it also calls
+  `authService.verifyActiveUser`: deleted user → 401 "User no longer exists.", blocked → 403 "Your account is blocked."
+  (same text as login/refresh and `USER_ERRORS.USER_BLOCKED`). It does **not** check `isAdmin`. Used by the wishlist and
+  cart routes. Protect new user routes with it: `router.get('/', authMiddleware, (req, res) => ...)` and read `req.user.userId`.
 - Signup is a two-step OTP flow. Pending signup data lives in Redis `signup:<email>` (300s) with
   `otp_attempts:<email>` (max 3). The user is created only in `verifyOtp`.
 
@@ -298,7 +300,7 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - **No new npm packages** (either app) without asking first. Everything listed in package.json is available.
 - Before any change touching more than ~2 files, or both apps, write a short plan (files + what changes) and get confirmation.
 - After changes: frontend `npm run lint` + `npm run build`; backend `node -e "require('./src/app')"`.
-  Lint has a pre-existing baseline of 17 errors / 2 warnings, so don't add new ones and report the before/after.
+  Lint has a pre-existing baseline of 14 errors / 1 warning, so don't add new ones and report the before/after.
 - Backend stays CommonJS (`require`/`module.exports`), frontend stays ESM `.jsx`/`.js`. No TypeScript files.
 - Never read, edit, print or commit `.env` files or secrets; never hardcode credentials or URLs that belong in env.
   Add new env vars to `envValidation.js` and tell the user which to set.
@@ -315,7 +317,6 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
   (`admin.auth.service`) returns no token, and `AdminLoginForm` just navigates. `/admin/*` frontend routes have no guard.
 - Global rate limiter is commented out in `app.js`; login/OTP endpoints are unthrottled.
 - OTP brute-force guard is weak: a wrong attempt resets `otp_attempts:<email>` TTL to 30s while the signup key lives 300s.
-- `authMiddleware` ignores `isBlocked`, so blocked users keep access until the access token expires.
 - `frontend/.env` is tracked in git (`frontend/.gitignore` doesn't ignore `.env`).
 - Frontend logout only clears Redux; it never calls `/user/auth/logout`, so the refresh cookie stays valid.
 
@@ -323,20 +324,19 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - `infrastructure/cache/redisClient.js` falls back to `env.REDIS_HOST/REDIS_PORT`, which `envValidation.js` never
   exports (`parseRedisHost/parseRedisPort` are unused). It only works because ioredis defaults to localhost:6379.
 - OTP email text says "expires in 30 seconds"; actual TTL is 300s.
-- `USER_ERRORS.USER_BLOCKED = "User is blocked"` doesn't match the backend ("Your account is blocked."), so the
-  axios blocked-user redirect never fires (and the backend returns 403 there only on login/refresh).
 - Signup zod schema is weaker than Joi (no lowercase/special-char rule), so the server rejects passwords the form accepts.
 - `ProductModal.jsx` calls hooks after an early `return null` (rules-of-hooks) and imports via `'../../../src/hooks/...'`.
 - `AdminProductsPage` calls `toast.error` during render. `keepPreviousData: true` in `AdminHooks.js` is ignored (v5).
 - `AdminDashboardPage` uses dynamic Tailwind classes (`bg-${statusColor}-50`) and hardcoded mock stats/orders.
-- Users without a password (e.g. old partner accounts) make `bcrypt.compare` throw on login → 500 instead of 401.
+- Admin login (`admin.auth.service`) still calls `bcrypt.compare` for users without a password → 500 instead of 401
+  (user login now answers 400 "This account uses Google sign-in...").
 - Cloudinary uploads happen before controller validation; rejected requests and removed variant images are never
   deleted (orphans).
 
 **Structure / inconsistencies**
 - Empty, unmounted stubs: `routes/user/user/user.routes.js`, `controllers/user/user/user.controller.js`,
-  `services/user/user/user.service.js`, `routes/user/order/order.routes.js`, `routes/user/products/products.routes.js`.
-  No order/cart model, controller or service exists.
+  `services/user/user/user.service.js`, `routes/user/order/order.routes.js`.
+  No order model, controller or service exists (the cart does: `/api/user/cart`, shipping rules in `config/shipping.js`).
 - `repositories/admin/` is empty; admin services use `repositories/user/*`. `repositories/user/auth/auth.repository.js`
   duplicates `user.repository.js` and is used only by `admin.auth.service.js`. `AuthService.adminLogin` is dead code
   duplicating `AdminAuthService.adminLogin`.

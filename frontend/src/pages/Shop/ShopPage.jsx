@@ -147,7 +147,7 @@ const ShopPage = () => {
       <>
         <ul className={`${GRID} transition-opacity duration-200 ${isPlaceholderData ? "opacity-60" : "opacity-100"}`}>
           {items.map((item) => (
-            <li key={item._id}>
+            <li key={`${item._id}-${item.defaultVariant._id}`}>
               <ProductCard item={item} />
             </li>
           ))}

@@ -21,9 +21,22 @@ const userSchema = new mongoose.Schema(
             trim: true
         },
 
+        // Google-only accounts have no password
         password: {
             type: String,
-            required: false
+            required: [function () { return this.authProvider === 'local'; }, 'Password is required']
+        },
+
+        googleId: {
+            type: String,
+            unique: true,
+            sparse: true
+        },
+
+        authProvider: {
+            type: String,
+            enum: ['local', 'google'],
+            default: 'local'
         },
 
         phone: {

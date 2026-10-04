@@ -10,9 +10,9 @@ import {
   CATEGORY_LABELS,
   FREE_DELIVERY_MIN,
   LOW_STOCK_LIMIT,
-  cleanName,
   formatPrice,
   getProductBadges,
+  productTitle,
 } from "../../utils/product";
 
 const BADGE_STYLES = {
@@ -105,17 +105,16 @@ const ProductInfo = ({
             id={titleId}
             className="min-w-0 text-[26px] font-extrabold leading-tight tracking-tight text-[#1e1a3a] sm:text-[32px] xl:text-[36px]"
           >
-            {cleanName(product.name)}
+            {productTitle(product.name, variant.name)}
           </h1>
           <WishlistButton
             productId={product._id}
             variantId={variant._id}
-            name={cleanName(product.name)}
+            name={productTitle(product.name, variant.name)}
             size={20}
             className="border border-pink-100 sm:mt-1"
           />
         </div>
-        <p className="mt-1.5 text-[14px] font-medium text-slate-500">{cleanName(variant.name)}</p>
         <RatingSummaryLink average={DUMMY_RATING_SUMMARY.average} total={DUMMY_RATING_SUMMARY.total} />
       </div>
 

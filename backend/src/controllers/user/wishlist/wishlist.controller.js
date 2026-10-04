@@ -1,4 +1,5 @@
 const wishlistService = require('../../../services/user/wishlist/wishlist.service');
+const cartService = require('../../../services/user/cart/cart.service');
 
 const DEFAULT_LIMIT = 12;
 
@@ -71,6 +72,24 @@ class WishlistController {
                 success: true,
                 message: 'Product removed from wishlist',
                 data: { productId: req.params.productId }
+            });
+        } catch (error) {
+            const statusCode = error.statusCode || 500;
+            return res.status(statusCode).json({
+                success: false,
+                message: error.message || 'Internal Server Error'
+            });
+        }
+    }
+
+    // Adds one to the cart, then removes the product from the wishlist
+    async moveToCart(req, res) {
+        try {
+            const result = await cartService.moveFromWishlist(req.user.userId, req.params.productId, req.body.variantId);
+            return res.status(200).json({
+                success: true,
+                message: 'Moved to cart',
+                data: result
             });
         } catch (error) {
             const statusCode = error.statusCode || 500;

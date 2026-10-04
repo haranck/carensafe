@@ -13,6 +13,15 @@ class UserRepository {
         return User.findOne({ email: email.toLowerCase() });
     }
 
+    // Only what authMiddleware needs on every request
+    findStatusById(userId) {
+        return User.findById(userId).select('isBlocked').lean();
+    }
+
+    findByGoogleId(googleId) {
+        return User.findOne({ googleId });
+    }
+
     async findAll(filter = {}, page = 1, limit = 10) {
         const skip = (page - 1) * limit;
         const [data, total] = await Promise.all([

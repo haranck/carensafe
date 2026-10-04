@@ -110,8 +110,9 @@ class ProductsService {
             const variants = product.variants.filter((variant) => variant.isActive);
             if (variants.length === 0) return;
 
-            productCount += 1;
-            if (isComboName(product.name)) comboCount += 1;
+            // The shop lists every variant as its own card, so counts are per variant
+            productCount += variants.length;
+            if (isComboName(product.name)) comboCount += variants.length;
             variants.forEach((variant) => {
                 splitSize(variant.size).forEach((size) => sizes.add(size));
                 minPrice = Math.min(minPrice, variant.price);

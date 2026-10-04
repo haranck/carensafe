@@ -67,6 +67,10 @@ const env = {
   SMTP_USER: (process.env.SMTP_USER || '').trim(),
   SMTP_PASS: (process.env.SMTP_PASS || '').trim(),
   SMTP_FROM: (process.env.SMTP_FROM || '').trim(),
+
+  // Google OAuth (optional: without both, POST /api/user/auth/google returns 503)
+  GOOGLE_CLIENT_ID: (process.env.GOOGLE_CLIENT_ID || '').trim(),
+  GOOGLE_CLIENT_SECRET: (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
 };
 
 module.exports = env;

@@ -90,6 +90,34 @@ class AuthController {
         }
     }
 
+    async googleLogin(req, res) {
+        try {
+            const { code } = req.body;
+            const data = await authService.googleLogin(code);
+
+            res.cookie('refreshToken', data.refreshToken, {
+                httpOnly: true,
+                secure: env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: env.REFRESH_TOKEN_MAX_AGE
+            });
+
+            // Strip refreshToken from the response body for security
+            const { refreshToken, ...responseData } = data;
+
+            return res.status(200).json({
+                success: true,
+                message: 'Login successful',
+                data: responseData
+            });
+        } catch (error) {
+            const statusCode = error.statusCode || 500;
+            return res.status(statusCode).json({
+                success: false,
+                message: error.message || 'Internal Server Error'
+            });
+        }
+    }
 
     async refresh(req, res) {
         try {
