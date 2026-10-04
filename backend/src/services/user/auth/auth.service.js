@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const userRepository = require('../../../repositories/user/user.repository');
 const passwordUtil = require('../../../utils/password');
 const otpUtil = require('../../../utils/otp');
@@ -5,6 +6,16 @@ const redisUtil = require('../../../utils/redis');
 const jwtUtil = require('../../../utils/jwt');
 const googleUtil = require('../../../utils/google');
 const emailService = require('./email.service');
+
+const RESET_OTP_TTL = 300; // seconds, same as the signup OTP
+const RESET_COOLDOWN = 30; // seconds between "send code" requests
+const RESET_TOKEN_TTL = 600; // seconds to choose the new password after the code is verified
+const MAX_RESET_ATTEMPTS = 3;
+const RESET_SENT_MESSAGE = "If an account exists for this email, we've sent a verification code.";
+
+const resetOtpKey = (email) => `password_reset:${email}`;
+const resetCooldownKey = (email) => `password_reset_cooldown:${email}`;
+const resetTokenKey = (token) => `password_reset_token:${token}`;
 
 class AuthService {
     async signup({ firstName, lastName, email, password, phone }) {
@@ -177,7 +188,7 @@ class AuthService {
 
         // Google-only accounts have no password (bcrypt.compare would throw)
         if (!user.password) {
-            const error = new Error('This account uses Google sign-in. Please continue with Google.');
+            const error = new Error('This account uses Google sign-in. Continue with Google, or use Forgot Password to create a password.');
             error.statusCode = 400;
             throw error;
         }
@@ -354,6 +365,83 @@ class AuthService {
         const newRefreshToken = jwtUtil.generateRefreshToken(user);
 
         return { accessToken, refreshToken: newRefreshToken };
+    }
+
+    // Step 1 of forgot password. Same answer whether or not the email has an account (no account lookup through
+    // this form); only active, non-admin accounts actually get a code. Google-only accounts use it to create a password.
+    async forgotPassword(email) {
+        const normalizedEmail = email.trim().toLowerCase();
+        if (await redisUtil.get(resetCooldownKey(normalizedEmail))) {
+            const error = new Error(`Please wait ${RESET_COOLDOWN} seconds before requesting another code.`);
+            error.statusCode = 429;
+            throw error;
+        }
+        await redisUtil.setEx(resetCooldownKey(normalizedEmail), RESET_COOLDOWN, 1);
+
+        const user = await userRepository.findByEmail(normalizedEmail);
+        if (user && !user.isAdmin && !user.isBlocked) {
+            const otp = otpUtil.generateOtp();
+            await redisUtil.setEx(resetOtpKey(normalizedEmail), RESET_OTP_TTL, {
+                otp,
+                attempts: 0,
+                expiresAt: Date.now() + RESET_OTP_TTL * 1000
+            });
+            await emailService.sendOtpEmail(normalizedEmail, otp);
+        }
+
+        return { message: RESET_SENT_MESSAGE, expiresIn: RESET_OTP_TTL };
+    }
+
+    // Step 2: a correct code is swapped for a one-time reset token (10 min). Wrong codes count against the same
+    // 5-minute window; the 3rd wrong one ends it.
+    async verifyResetOtp(email, otp) {
+        const normalizedEmail = email.trim().toLowerCase();
+        const key = resetOtpKey(normalizedEmail);
+        const pending = await redisUtil.get(key);
+        if (!pending) {
+            const error = new Error('The code has expired. Please request a new one.');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        if (pending.otp !== otp) {
+            const attempts = pending.attempts + 1;
+            const secondsLeft = Math.ceil((pending.expiresAt - Date.now()) / 1000);
+            if (attempts >= MAX_RESET_ATTEMPTS || secondsLeft <= 0) {
+                await redisUtil.delete(key);
+                const error = new Error('Too many incorrect attempts. Please request a new code.');
+                error.statusCode = 400;
+                throw error;
+            }
+            await redisUtil.setEx(key, secondsLeft, { ...pending, attempts });
+            const left = MAX_RESET_ATTEMPTS - attempts;
+            const error = new Error(`Invalid code. You have ${left} ${left === 1 ? 'attempt' : 'attempts'} left.`);
+            error.statusCode = 400;
+            throw error;
+        }
+
+        await redisUtil.delete(key);
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        await redisUtil.setEx(resetTokenKey(resetToken), RESET_TOKEN_TTL, { email: normalizedEmail });
+        return { resetToken, expiresIn: RESET_TOKEN_TTL };
+    }
+
+    // Step 3: sets the new password (or the first one, for Google-only accounts) and burns the token
+    async resetPassword(resetToken, password) {
+        const key = resetTokenKey(resetToken);
+        const session = await redisUtil.get(key);
+        const user = session ? await userRepository.findByEmail(session.email) : null;
+        if (!user || user.isBlocked || user.isAdmin) {
+            const error = new Error('Your reset session has expired. Please start again.');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const hashedPassword = await passwordUtil.hash(password);
+        await userRepository.updateById(user._id, { password: hashedPassword });
+        await redisUtil.delete(key);
+
+        return { email: user.email };
     }
 
     // authMiddleware, on every protected request: deleted or blocked accounts lose access straight away,

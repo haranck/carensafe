@@ -25,6 +25,7 @@ carensafe/
   `REFRESH_TOKEN_MAX_AGE`, `CLOUDINARY_*`). `utils/email.js` reads `SMTP_*`/`EMAIL_FROM` directly; without
   `SMTP_USER` the OTP is only logged to the console (`[Mock Email]`).
 - Frontend needs `VITE_API_BASE_URL` pointing at the API **including `/api`** (API_ROUTES start at `/user/...`).
+  Optional: `VITE_GOOGLE_CLIENT_ID` (Google button), `VITE_MAPBOX_ACCESS_TOKEN` (public `pk.` token, address map).
 - Always import env via `require('../config/envValidation')`, not `process.env`.
 
 ---
@@ -39,11 +40,12 @@ app.js mount → routes → middlewares → controller → service → repositor
 ```
 
 Mounted in `src/app.js`: `/api/user/auth`, `/api/user/products`, `/api/user/wishlist`, `/api/user/cart`,
+`/api/user/profile` (the `user/user` route/controller/service files), `/api/user/addresses`,
 `/api/admin/auth`, `/api/admin/users`, `/api/admin/products`.
 `globalErrorHandler` is registered last.
 
-> The `user/user` feature files (`user.routes.js`, `user.controller.js`, `user.service.js`) are **empty**.
-> The working reference flow is **user auth**: `routes/user/auth/auth.routes.js` →
+> The `user/user` feature files (`user.routes.js`, `user.controller.js`, `user.service.js`) are the profile API
+> (mounted at `/api/user/profile`). The reference flow is **user auth**: `routes/user/auth/auth.routes.js` →
 > `controllers/user/auth/auth.controller.js` → `services/user/auth/auth.service.js` →
 > `repositories/user/user.repository.js` → `models/user.model.js`. For admin CRUD with pagination copy
 > `admin.user.*`.
@@ -318,7 +320,9 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - Global rate limiter is commented out in `app.js`; login/OTP endpoints are unthrottled.
 - OTP brute-force guard is weak: a wrong attempt resets `otp_attempts:<email>` TTL to 30s while the signup key lives 300s.
 - `frontend/.env` is tracked in git (`frontend/.gitignore` doesn't ignore `.env`).
-- Frontend logout only clears Redux; it never calls `/user/auth/logout`, so the refresh cookie stays valid.
+- Logout (`hooks/Auth/useLogout.js`) blacklists only the refresh token: the access token stays valid for up to 15 min.
+- `services/user/auth/email.service.js` logs every OTP to the server console (`[Console] Generated OTP`).
+- Product images upload to `carensafe/products` (avatars use their own `avatarUpload` → `carensafe/avatars`).
 
 **Bugs**
 - `infrastructure/cache/redisClient.js` falls back to `env.REDIS_HOST/REDIS_PORT`, which `envValidation.js` never
@@ -334,9 +338,15 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
   deleted (orphans).
 
 **Structure / inconsistencies**
-- Empty, unmounted stubs: `routes/user/user/user.routes.js`, `controllers/user/user/user.controller.js`,
-  `services/user/user/user.service.js`, `routes/user/order/order.routes.js`.
+- Empty, unmounted stub: `routes/user/order/order.routes.js`. Orders in the profile area are mock data
+  (`constants/mockOrders.js`, read via `useGetMyOrders`). There is no wallet backend (the Wallet tab shows ₹0.00).
   No order model, controller or service exists (the cart does: `/api/user/cart`, shipping rules in `config/shipping.js`).
+  `/checkout` is a **demo** (`pages/Checkout/*`): Place Order waits 1.5s and opens `/order-success` with the order in router
+  state; nothing is saved, no payment is taken and the cart isn't cleared. Money rows come from `utils/checkout.js` `checkoutTotals`.
+- Addresses can carry an optional map pin: `location` GeoJSON Point **[lng, lat]** (2dsphere index, Joi rejects points
+  outside India) + `formattedAddress`. The address form's map (`components/Address/LocationPicker.jsx`, lazy `mapbox-gl`)
+  and reverse geocoding need `VITE_MAPBOX_ACCESS_TOKEN`; without it the location section is hidden. Pincodes are checked
+  against India Post (`constants/externalApis.js`), failing open when it's down.
 - `repositories/admin/` is empty; admin services use `repositories/user/*`. `repositories/user/auth/auth.repository.js`
   duplicates `user.repository.js` and is used only by `admin.auth.service.js`. `AuthService.adminLogin` is dead code
   duplicating `AdminAuthService.adminLogin`.

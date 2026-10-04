@@ -20,6 +20,14 @@ const ShopPage = lazy(loadShopPage);
 const ProductDetailPage = lazy(loadProductDetailPage);
 const WishlistPage = lazy(() => import("../../pages/Wishlist/WishlistPage"));
 const CartPage = lazy(() => import("../../pages/Cart/CartPage"));
+const CheckoutPage = lazy(() => import("../../pages/Checkout/CheckoutPage"));
+const OrderSuccessPage = lazy(() => import("../../pages/Checkout/OrderSuccessPage"));
+const ProfileLayout = lazy(() => import("../../pages/Profile/ProfileLayout"));
+const ProfileDashboardPage = lazy(() => import("../../pages/Profile/ProfileDashboardPage"));
+const ProfileEditPage = lazy(() => import("../../pages/Profile/ProfileEditPage"));
+const ProfileOrdersPage = lazy(() => import("../../pages/Profile/ProfileOrdersPage"));
+const ProfileAddressesPage = lazy(() => import("../../pages/Profile/ProfileAddressesPage"));
+const ProfileWalletPage = lazy(() => import("../../pages/Profile/ProfileWalletPage"));
 const ComingSoonPage = lazy(() => import("../../pages/ComingSoon/ComingSoonPage"));
 
 // Download the lazy pages' code while the browser is idle, so moving between pages never waits on it
@@ -64,11 +72,18 @@ const UserRoutes = () => {
                 <Route element={<ProtectedRoute />}>
                     <Route path={FRONTEND_ROUTES.WISHLIST} element={<WishlistPage />} />
                     <Route path={FRONTEND_ROUTES.CART} element={<CartPage />} />
-                    <Route path={FRONTEND_ROUTES.CHECKOUT} element={<ComingSoonPage />} />
-                    <Route path={FRONTEND_ROUTES.ORDERS} element={<ComingSoonPage />} />
-                    <Route path={FRONTEND_ROUTES.PROFILE} element={<ComingSoonPage />} />
+                    <Route path={FRONTEND_ROUTES.CHECKOUT} element={<CheckoutPage />} />
+                    <Route path={FRONTEND_ROUTES.ORDER_SUCCESS} element={<OrderSuccessPage />} />
                     <Route path={FRONTEND_ROUTES.REWARDS} element={<ComingSoonPage />} />
-                    <Route path={FRONTEND_ROUTES.WALLET} element={<ComingSoonPage />} />
+
+                    {/* Profile area: shared sidebar / tab layout, each tab its own lazy chunk */}
+                    <Route path={FRONTEND_ROUTES.PROFILE} element={<ProfileLayout />}>
+                        <Route index element={<ProfileDashboardPage />} />
+                        <Route path={FRONTEND_ROUTES.PROFILE_EDIT} element={<ProfileEditPage />} />
+                        <Route path={FRONTEND_ROUTES.ORDERS} element={<ProfileOrdersPage />} />
+                        <Route path={FRONTEND_ROUTES.PROFILE_ADDRESSES} element={<ProfileAddressesPage />} />
+                        <Route path={FRONTEND_ROUTES.WALLET} element={<ProfileWalletPage />} />
+                    </Route>
                 </Route>
             </Routes>
         </Suspense>

@@ -11,6 +11,7 @@ import { setAuthUser } from "../../store/slices/authSlice";
 import { FRONTEND_ROUTES, postLoginPath } from "../../constants/frontendRoutes";
 import { getErrorMessage } from "../../utils/errorMessage";
 import GoogleLoginButton from "./GoogleLoginButton";
+import ForgotPasswordModal from "./ForgotPasswordModal";
 
 // ── Zod schema ──────────────────────────────────────────────
 const loginSchema = z.object({
@@ -58,10 +59,13 @@ const Field = ({ label, icon: Icon, error, children, rightIcon }) => (
 // ── Component ─────────────────────────────────────────────────
 const LoginForm = () => {
     const [showPassword, setShowPassword] = useState(false);
-    
+    const [isForgotOpen, setIsForgotOpen] = useState(false);
+
     const {
         register,
         handleSubmit,
+        getValues,
+        setValue,
         formState: { errors },
     } = useForm({ resolver: zodResolver(loginSchema), mode: "onTouched" });
 
@@ -138,9 +142,13 @@ const LoginForm = () => {
                 </Field>
 
                 <div className="flex justify-end -mt-3">
-                    <Link to="/forgot-password" className="text-[12px] font-semibold text-slate-500 hover:text-[#d6008a] transition-colors">
+                    <button
+                        type="button"
+                        onClick={() => setIsForgotOpen(true)}
+                        className="inline-flex min-h-10 items-center rounded-full px-2 -mr-2 text-[12px] font-semibold text-slate-500 hover:text-[#d6008a] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d6008a]/30"
+                    >
                         Forgot Password?
-                    </Link>
+                    </button>
                 </div>
 
                 {/* Submit */}
@@ -173,6 +181,17 @@ const LoginForm = () => {
                     </Link>
                 </p>
             </form>
+
+            {/* Forgot password (Google sign-in users create a password here); afterwards their email is filled in */}
+            <ForgotPasswordModal
+                open={isForgotOpen}
+                initialEmail={isForgotOpen ? getValues("email") : ""}
+                onClose={() => setIsForgotOpen(false)}
+                onDone={(email) => {
+                    setValue("email", email, { shouldValidate: true });
+                    setValue("password", "");
+                }}
+            />
         </div>
     );
 };

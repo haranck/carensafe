@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
+import { Link, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { AnimatePresence, LazyMotion, domAnimation } from "framer-motion";
-import { clearAccessToken } from "../../store/slices/tokenSlice";
-import { clearAuth } from "../../store/slices/authSlice";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
+import LogoutDialog from "../common/LogoutDialog";
 import { CONTAINER } from "../../constants/customerTheme";
 import AnnouncementBar from "./HeaderParts/AnnouncementBar";
 import NavLinks from "./HeaderParts/NavLinks";
@@ -20,8 +19,6 @@ const DRAWER_ID = "header-mobile-drawer";
 
 export const Header = () => {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
 
   const accessToken = useSelector((s) => s.token.accessToken);
   const user = useSelector((s) => s.auth.user);
@@ -60,11 +57,9 @@ export const Header = () => {
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
 
-  const handleLogout = () => {
-    dispatch(clearAccessToken());
-    dispatch(clearAuth());
-    navigate(FRONTEND_ROUTES.LOGIN);
-  };
+  // The menu / drawer Logout asks first; LogoutDialog then calls the API and clears everything (useLogout)
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
+  const handleLogout = () => setIsLogoutOpen(true);
 
   return (
     <LazyMotion features={domAnimation} strict>
@@ -130,6 +125,8 @@ export const Header = () => {
           />
         )}
       </AnimatePresence>
+
+      <LogoutDialog open={isLogoutOpen} onClose={() => setIsLogoutOpen(false)} />
     </LazyMotion>
   );
 };

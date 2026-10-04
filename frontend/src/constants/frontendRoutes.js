@@ -15,11 +15,16 @@ export const FRONTEND_ROUTES = {
   CONTACT: "/contact",
   CART: "/cart",
   CHECKOUT: "/checkout",
+  ORDER_SUCCESS: "/order-success", // demo confirmation, opened from checkout with the order in router state
   WISHLIST: "/wishlist",
-  ORDERS: "/orders",
-  PROFILE: "/profile",
   REWARDS: "/rewards",
-  WALLET: "/wallet",
+
+  // Profile area: /profile is the dashboard, the rest are its tabs
+  PROFILE: "/profile",
+  PROFILE_EDIT: "/profile/edit",
+  ORDERS: "/profile/orders",
+  PROFILE_ADDRESSES: "/profile/addresses",
+  WALLET: "/profile/wallet",
 
   // Admin Routes
   ADMIN_LOGIN: "/admin/login",

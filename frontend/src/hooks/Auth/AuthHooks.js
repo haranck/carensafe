@@ -1,5 +1,15 @@
 import { useMutation } from "@tanstack/react-query";
-import { registerUser, verifyOtp, resendOtp, loginUser, googleLogin, adminLogin } from "../../services/Auth/authService";
+import {
+    registerUser,
+    verifyOtp,
+    resendOtp,
+    loginUser,
+    googleLogin,
+    adminLogin,
+    forgotPassword,
+    verifyResetOtp,
+    resetPassword,
+} from "../../services/Auth/authService";
 
 export const useUserSignUp = () => {
     return useMutation({
@@ -28,6 +38,24 @@ export const useUserLogin = () => {
 export const useGoogleAuth = () => {
     return useMutation({
         mutationFn: googleLogin,
+    });
+};
+
+export const useForgotPassword = () => {
+    return useMutation({
+        mutationFn: forgotPassword,
+    });
+};
+
+export const useVerifyResetOtp = () => {
+    return useMutation({
+        mutationFn: verifyResetOtp,
+    });
+};
+
+export const useResetPassword = () => {
+    return useMutation({
+        mutationFn: resetPassword,
     });
 };
 

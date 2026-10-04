@@ -1,7 +1,7 @@
 import { useEffect, useId } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
-import { ArrowRight, CreditCard, Gift, Package, Sparkles, User, Wallet } from "lucide-react";
+import { ArrowRight, CreditCard, Gift, Sparkles } from "lucide-react";
 import Header from "../../components/Layout/Header";
 import Footer from "../../components/Layout/Footer";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
@@ -10,10 +10,7 @@ import { CONTAINER, FOCUS_RING, PAGE_BACKGROUND, PINK_BUTTON } from "../../const
 // Account pages that are linked from the header but not built yet (all behind ProtectedRoute)
 const PAGES = {
   [FRONTEND_ROUTES.CHECKOUT]: { title: "Checkout", icon: CreditCard },
-  [FRONTEND_ROUTES.ORDERS]: { title: "My Orders", icon: Package },
-  [FRONTEND_ROUTES.PROFILE]: { title: "My Profile", icon: User },
   [FRONTEND_ROUTES.REWARDS]: { title: "Rewards", icon: Gift },
-  [FRONTEND_ROUTES.WALLET]: { title: "Wallet", icon: Wallet },
 };
 const FALLBACK = { title: "This page", icon: Sparkles };
 

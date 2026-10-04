@@ -95,7 +95,6 @@ const CartPage = () => {
       .catch(() => {});
   };
 
-  // Checkout is the next task: the route shows Coming Soon until then
   const handleCheckout = () => navigate(FRONTEND_ROUTES.CHECKOUT);
 
   const handleClear = () => {

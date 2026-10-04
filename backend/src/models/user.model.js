@@ -53,6 +53,11 @@ const userSchema = new mongoose.Schema(
             type: String
         },
 
+        // Cloudinary id of an uploaded avatar (none for Google photos), so it can be deleted when replaced
+        avatarPublicId: {
+            type: String
+        },
+
         isAdmin: {
             type: Boolean,
             default: false
