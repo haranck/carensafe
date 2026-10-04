@@ -140,6 +140,24 @@ class ProductRepository {
     deleteById(productId) {
         return Product.findByIdAndDelete(productId);
     }
+
+    // Takes `quantity` from a variant only while it has at least that much (modifiedCount 0 = not enough stock)
+    decrementVariantStock(productId, variantId, quantity, session) {
+        return Product.updateOne(
+            { _id: productId, variants: { $elemMatch: { _id: variantId, stock: { $gte: quantity } } } },
+            { $inc: { 'variants.$.stock': -quantity } },
+            { session }
+        );
+    }
+
+    // Puts stock back (cancellations, returns); a deleted product / variant matches nothing
+    incrementVariantStock(productId, variantId, quantity, session) {
+        return Product.updateOne(
+            { _id: productId, 'variants._id': variantId },
+            { $inc: { 'variants.$.stock': quantity } },
+            { session }
+        );
+    }
 }
 
 module.exports = new ProductRepository();

@@ -4,14 +4,15 @@ import UserAvatar from "../../components/common/UserAvatar";
 import Panel from "../../components/Profile/Panel";
 import PanelSkeleton from "../../components/Profile/PanelSkeleton";
 import AddressCard from "../../components/Profile/AddressCard";
-import OrderStatusPill from "../../components/Profile/OrderStatusPill";
-import { OrderThumb } from "../../components/Profile/OrderCard";
+import OrderThumb from "../../components/Order/OrderThumb";
+import { OrderStatusPill } from "../../components/Order/OrderPills";
 import SectionError from "../../components/Home/SectionError";
-import { useGetMyOrders, useGetProfile } from "../../hooks/Profile/ProfileHooks";
+import { useGetProfile } from "../../hooks/Profile/ProfileHooks";
+import { useGetMyOrders } from "../../hooks/Order/OrderHooks";
 import { useGetAddresses } from "../../hooks/Address/AddressHooks";
 import { useWishlistIds } from "../../hooks/Wishlist/WishlistHooks";
 import { useCartCount } from "../../hooks/Cart/CartHooks";
-import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
+import { FRONTEND_ROUTES, orderDetailPath } from "../../constants/frontendRoutes";
 import { BRAND_GRADIENT, FOCUS_RING } from "../../constants/customerTheme";
 import { formatPrice } from "../../utils/product";
 import { formatDate, formatMonthYear } from "../../utils/date";
@@ -85,10 +86,12 @@ const LatestOrder = ({ order }) => {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-[14px] font-extrabold text-[#1e1a3a]">Order #{order._id}</p>
+          <Link to={orderDetailPath(order._id)} className={`break-all rounded text-[14px] font-extrabold text-[#1e1a3a] hover:text-[#d6008a] ${FOCUS_RING}`}>
+            Order #{order.orderNumber}
+          </Link>
           <p className="text-[12.5px] text-slate-500">{formatDate(order.createdAt)}</p>
         </div>
-        <OrderStatusPill status={order.status} />
+        <OrderStatusPill status={order.orderStatus} />
       </div>
       <div className="flex items-center gap-3">
         <OrderThumb image={first.image} />
@@ -96,7 +99,7 @@ const LatestOrder = ({ order }) => {
           <p className="line-clamp-2 text-[13.5px] font-semibold text-[#1e1a3a]">{first.name}</p>
           {rest.length > 0 && <p className="text-[12.5px] font-semibold text-slate-500">+{rest.length} more</p>}
         </div>
-        <p className="flex-shrink-0 text-[16px] font-extrabold text-[#1e1a3a]">{formatPrice(order.total)}</p>
+        <p className="flex-shrink-0 text-[16px] font-extrabold text-[#1e1a3a]">{formatPrice(order.pricing.total)}</p>
       </div>
     </div>
   );
@@ -104,14 +107,15 @@ const LatestOrder = ({ order }) => {
 
 const ProfileDashboardPage = () => {
   const { data: profileData, isLoading, isError, isFetching, refetch } = useGetProfile();
-  const { data: ordersData, isLoading: isLoadingOrders } = useGetMyOrders();
+  // Newest order only; the total count comes from the pagination
+  const { data: ordersData, isLoading: isLoadingOrders } = useGetMyOrders({ limit: 1 });
   const { data: addressesData, isLoading: isLoadingAddresses } = useGetAddresses();
   const { data: wishlistIds } = useWishlistIds();
   const { data: cartCount = 0 } = useCartCount();
 
   const profile = profileData?.data;
-  const orders = ordersData?.data || [];
-  const latestOrder = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+  const latestOrder = ordersData?.data?.[0];
+  const orderCount = ordersData?.pagination?.total || 0;
   const defaultAddress = (addressesData?.data || []).find((address) => address.isDefault);
 
   if (isLoading) {
@@ -136,7 +140,7 @@ const ProfileDashboardPage = () => {
       <WelcomeCard profile={profile} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile icon={Package} label="Orders" value={orders.length} to={FRONTEND_ROUTES.ORDERS} />
+        <StatTile icon={Package} label="Orders" value={orderCount} to={FRONTEND_ROUTES.ORDERS} />
         <StatTile icon={Heart} label="Wishlist items" value={wishlistIds?.size || 0} to={FRONTEND_ROUTES.WISHLIST} />
         <StatTile icon={ShoppingBag} label="Cart items" value={cartCount} to={FRONTEND_ROUTES.CART} />
         {/* No wallet API yet: always ₹0 */}
@@ -147,7 +151,7 @@ const ProfileDashboardPage = () => {
         <Panel
           title="Latest Order"
           action={
-            orders.length > 0 && (
+            orderCount > 0 && (
               <Link to={FRONTEND_ROUTES.ORDERS} className={PANEL_LINK}>
                 View all orders <ArrowRight size={14} aria-hidden="true" />
               </Link>

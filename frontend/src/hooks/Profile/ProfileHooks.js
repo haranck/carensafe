@@ -8,7 +8,6 @@ import {
     verifyEmailChange,
 } from "../../services/Profile/profileService";
 import { setAuthUser } from "../../store/slices/authSlice";
-import { MOCK_ORDERS } from "../../constants/mockOrders";
 
 // Keys carry the user id (like cart / wishlist), so another account on this browser never sees cached data
 const profileKey = (userId) => ["profile", userId];
@@ -54,12 +53,4 @@ export const useRequestEmailChange = () => useMutation({ mutationFn: requestEmai
 export const useVerifyEmailChange = () => {
     const applyProfile = useApplyProfile();
     return useMutation({ mutationFn: verifyEmailChange, onSuccess: applyProfile });
-};
-
-// TEMP: replace with orders API. Same { data } shape the real endpoint will return, so only queryFn changes.
-const getMockOrders = () => Promise.resolve({ success: true, message: "Orders retrieved successfully", data: MOCK_ORDERS });
-
-export const useGetMyOrders = () => {
-    const { isLoggedIn, userId } = useSession();
-    return useQuery({ queryKey: ["my_orders", userId], queryFn: getMockOrders, enabled: isLoggedIn });
 };

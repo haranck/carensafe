@@ -42,8 +42,8 @@ class CartRepository {
         ).lean();
     }
 
-    clear(userId) {
-        return Cart.updateOne({ user: userId }, { $set: { items: [] } });
+    clear(userId, session) {
+        return Cart.updateOne({ user: userId }, { $set: { items: [] } }, { session });
     }
 
     // Any variant of the product when variantId is omitted

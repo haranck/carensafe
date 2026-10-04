@@ -40,8 +40,8 @@ app.js mount → routes → middlewares → controller → service → repositor
 ```
 
 Mounted in `src/app.js`: `/api/user/auth`, `/api/user/products`, `/api/user/wishlist`, `/api/user/cart`,
-`/api/user/profile` (the `user/user` route/controller/service files), `/api/user/addresses`,
-`/api/admin/auth`, `/api/admin/users`, `/api/admin/products`.
+`/api/user/profile` (the `user/user` route/controller/service files), `/api/user/addresses`, `/api/user/orders`,
+`/api/admin/auth`, `/api/admin/users`, `/api/admin/products`, `/api/admin/orders`.
 `globalErrorHandler` is registered last.
 
 > The `user/user` feature files (`user.routes.js`, `user.controller.js`, `user.service.js`) are the profile API
@@ -314,7 +314,8 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 ## Known issues (as of 2026-10-03)
 
 **Security**
-- **Admin API is unauthenticated**: `/api/admin/users` and `/api/admin/products` have no middleware;
+- **Admin API is unauthenticated**: `/api/admin/users`, `/api/admin/products` and `/api/admin/orders` (customer names,
+  phones, addresses, status changes) have no middleware;
   `authMiddleware` is never mounted; there's no admin-role check (the JWT has no `isAdmin`). Admin login
   (`admin.auth.service`) returns no token, and `AdminLoginForm` just navigates. `/admin/*` frontend routes have no guard.
 - Global rate limiter is commented out in `app.js`; login/OTP endpoints are unthrottled.
@@ -338,11 +339,14 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
   deleted (orphans).
 
 **Structure / inconsistencies**
-- Empty, unmounted stub: `routes/user/order/order.routes.js`. Orders in the profile area are mock data
-  (`constants/mockOrders.js`, read via `useGetMyOrders`). There is no wallet backend (the Wallet tab shows ₹0.00).
-  No order model, controller or service exists (the cart does: `/api/user/cart`, shipping rules in `config/shipping.js`).
-  `/checkout` is a **demo** (`pages/Checkout/*`): Place Order waits 1.5s and opens `/order-success` with the order in router
-  state; nothing is saved, no payment is taken and the cart isn't cleared. Money rows come from `utils/checkout.js` `checkoutTotals`.
+- Orders (COD only): rules in `config/orders.js` (statuses, transitions, 7-day return window, cancel reasons), pure helpers
+  in `utils/order.js`, logic in `services/user/order/order.service.js` (placing: one transaction for stock + order + cart
+  clear; cancel / return per item) and `services/admin/order/admin.order.service.js`. Customer responses carry
+  `canCancel` / `canReturn` flags so the UI never re-implements the rules. COD refunds are manual (`pricing.refundableAmount`);
+  the `razorpay` fields and `paymentMethod: 'razorpay'` are reserved for the online-payment step. There is no wallet backend
+  (the Wallet tab shows ₹0.00).
+- Some products share variant `_id`s (duplicated product documents). Orders and stock use product + variant together; the
+  cart's one-line-per-variant check does not.
 - Addresses can carry an optional map pin: `location` GeoJSON Point **[lng, lat]** (2dsphere index, Joi rejects points
   outside India) + `formattedAddress`. The address form's map (`components/Address/LocationPicker.jsx`, lazy `mapbox-gl`)
   and reverse geocoding need `VITE_MAPBOX_ACCESS_TOKEN`; without it the location section is hidden. Pincodes are checked

@@ -1,7 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { ChevronDown, Loader2 } from "lucide-react";
@@ -15,13 +13,12 @@ import CheckoutSummary from "../../components/Checkout/CheckoutSummary";
 import MobilePlaceOrderBar from "../../components/Checkout/MobilePlaceOrderBar";
 import { useGetCart } from "../../hooks/Cart/CartHooks";
 import { useGetAddresses } from "../../hooks/Address/AddressHooks";
-import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
+import { usePlaceOrder } from "../../hooks/Order/OrderHooks";
+import { FRONTEND_ROUTES, orderSuccessPath } from "../../constants/frontendRoutes";
 import { CONTAINER, FOCUS_RING, PAGE_BACKGROUND } from "../../constants/customerTheme";
-import { PAYMENT_DEFAULTS, checkoutTotals, demoOrderNumber, paymentLabel, paymentSchema } from "../../utils/checkout";
-import { formatAddress } from "../../utils/address";
-import { formatPrice, productTitle } from "../../utils/product";
-
-const DEMO_PROCESSING_MS = 1500;
+import { checkoutTotals } from "../../utils/checkout";
+import { formatPrice } from "../../utils/product";
+import { getErrorMessage } from "../../utils/errorMessage";
 
 // Nothing to order (empty cart, or only unavailable lines): back to the cart with a toast (in an effect, not render)
 const EmptyCartRedirect = () => {
@@ -37,20 +34,12 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const cartQuery = useGetCart();
   const addressesQuery = useGetAddresses();
+  const placeOrderMutation = usePlaceOrder();
   const [chosenAddressId, setChosenAddressId] = useState(null);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const [isPlacing, setIsPlacing] = useState(false);
-  const timerRef = useRef(null);
-
-  // Payment fields (demo). Hidden methods' fields are dropped (shouldUnregister), so card details don't linger.
-  const paymentForm = useForm({
-    resolver: zodResolver(paymentSchema),
-    mode: "onTouched",
-    defaultValues: PAYMENT_DEFAULTS,
-    shouldUnregister: true,
-  });
-  const { isValid: isPaymentValid } = paymentForm.formState;
-  const selectedMethod = useWatch({ control: paymentForm.control, name: "method" });
+  // Cash on Delivery is the only method until Razorpay; "Pay Online" is shown disabled
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const isPlacing = placeOrderMutation.isPending;
 
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
@@ -61,7 +50,6 @@ const CheckoutPage = () => {
     document.title = "Checkout | Care N Safe";
     return () => {
       document.title = previousTitle;
-      clearTimeout(timerRef.current);
     };
   }, []);
 
@@ -73,33 +61,27 @@ const CheckoutPage = () => {
 
   let blockedReason = "";
   if (!selectedAddress) blockedReason = "Add a delivery address to continue.";
-  else if (!selectedMethod) blockedReason = "Choose a payment method.";
-  else if (!isPaymentValid) blockedReason = "Complete your payment details.";
+  else if (!paymentMethod) blockedReason = "Choose a payment method.";
   const canPlaceOrder = !blockedReason;
 
-  // DEMO: no order is created and the cart is NOT cleared. Orders (API + payment gateway) come later; until then this
-  // only waits a moment and shows the success page. Card / UPI details are never sent, logged or passed on.
-  const submitOrder = ({ method }) => {
-    if (!selectedAddress || isPlacing) return;
-    setIsPlacing(true);
-    const order = {
-      orderNumber: demoOrderNumber(),
-      items: items.map((item) => ({
-        itemId: item.itemId,
-        name: productTitle(item.name, item.variantName),
-        quantity: item.quantity,
-        lineTotal: item.lineTotal,
-      })),
-      totals,
-      address: { fullName: selectedAddress.fullName, phone: selectedAddress.phone, text: formatAddress(selectedAddress) },
-      paymentMethod: paymentLabel(method),
-    };
-    timerRef.current = setTimeout(() => navigate(FRONTEND_ROUTES.ORDER_SUCCESS, { replace: true, state: { order } }), DEMO_PROCESSING_MS);
+  // The server recomputes prices and stock from the cart, takes the stock, creates the order and clears the cart
+  const placeOrder = () => {
+    if (!canPlaceOrder || isPlacing) return;
+    placeOrderMutation.mutate(
+      { addressId: selectedAddress._id, paymentMethod },
+      {
+        onSuccess: (response) => navigate(orderSuccessPath(response.data._id), { replace: true }),
+        onError: (error) => {
+          toast.error(getErrorMessage(error, "Couldn't place your order. Please try again."), { id: "place-order-error" });
+          // Stock or prices may have changed: show the cart as it is now
+          cartQuery.refetch();
+        },
+      }
+    );
   };
-  // Re-validates the payment fields first (shows their errors if something slipped through)
-  const placeOrder = () => paymentForm.handleSubmit(submitOrder)();
 
-  if (cartQuery.isSuccess && items.length === 0 && !isPlacing) return <EmptyCartRedirect />;
+  // While placing / after success the emptied cart must not bounce the user back to the cart page
+  if (cartQuery.isSuccess && items.length === 0 && !isPlacing && !placeOrderMutation.isSuccess) return <EmptyCartRedirect />;
 
   let content;
   if (cartQuery.isLoading) {
@@ -141,7 +123,7 @@ const CheckoutPage = () => {
 
         <div className="flex min-w-0 flex-col gap-5 lg:order-1">
           <AddressStep addressesQuery={addressesQuery} selectedId={selectedAddress?._id} onSelect={setChosenAddressId} />
-          <PaymentStep form={paymentForm} />
+          <PaymentStep method={paymentMethod} onChange={setPaymentMethod} />
         </div>
       </div>
     );

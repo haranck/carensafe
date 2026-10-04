@@ -28,9 +28,11 @@ const wishlistRoutes = require('./routes/user/wishlist/wishlist.routes');
 const cartRoutes = require('./routes/user/cart/cart.routes');
 const profileRoutes = require('./routes/user/user/user.routes');
 const addressRoutes = require('./routes/user/address/address.routes');
+const orderRoutes = require('./routes/user/order/order.routes');
 const adminAuthRoutes = require('./routes/admin/admin.auth.routes');
 const adminUserRoutes = require('./routes/admin/admin.user.routes');
 const adminProductRoutes = require('./routes/admin/admin.product.routes');
+const adminOrderRoutes = require('./routes/admin/admin.order.routes');
 
 app.use('/api/user/auth', authRoutes);
 app.use('/api/user/products', productsRoutes);
@@ -38,9 +40,11 @@ app.use('/api/user/wishlist', wishlistRoutes);
 app.use('/api/user/cart', cartRoutes);
 app.use('/api/user/profile', profileRoutes);
 app.use('/api/user/addresses', addressRoutes);
+app.use('/api/user/orders', orderRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/products', adminProductRoutes);
+app.use('/api/admin/orders', adminOrderRoutes);
 
 app.use(globalErrorHandler);
 

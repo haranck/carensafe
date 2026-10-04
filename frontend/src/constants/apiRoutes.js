@@ -47,6 +47,15 @@ export const API_ROUTES = {
         MOVE_TO_WISHLIST: (itemId) => `/user/cart/items/${itemId}/move-to-wishlist`,
         CLEAR: "/user/cart",
     },
+    ORDERS: {
+        PLACE: "/user/orders",
+        LIST: "/user/orders",
+        DETAIL: (id) => `/user/orders/${id}`,
+        CANCEL: (id) => `/user/orders/${id}/cancel`,
+        CANCEL_ITEM: (id, itemId) => `/user/orders/${id}/items/${itemId}/cancel`,
+        RETURN: (id) => `/user/orders/${id}/return`,
+        RETURN_ITEM: (id, itemId) => `/user/orders/${id}/items/${itemId}/return`,
+    },
     ADMIN_AUTH: {
         LOGIN: "/admin/auth/login",
     },
@@ -60,5 +69,15 @@ export const API_ROUTES = {
         CREATE: "/admin/products",
         UPDATE_STATUS: (id) => `/admin/products/${id}/status`,
         UPDATE_VARIANT: (id, variantId) => `/admin/products/${id}/variants/${variantId}`,
+    },
+    ADMIN_ORDERS: {
+        GET_ALL: "/admin/orders",
+        STATS: "/admin/orders/stats",
+        RETURNS: "/admin/orders/returns",
+        DETAIL: (id) => `/admin/orders/${id}`,
+        UPDATE_STATUS: (id) => `/admin/orders/${id}/status`,
+        CANCEL: (id) => `/admin/orders/${id}/cancel`,
+        DECIDE_RETURN: (id, itemId) => `/admin/orders/${id}/items/${itemId}/return`,
+        RETURN_RECEIVED: (id, itemId) => `/admin/orders/${id}/items/${itemId}/return/received`,
     }
 };

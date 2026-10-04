@@ -22,6 +22,7 @@ const WishlistPage = lazy(() => import("../../pages/Wishlist/WishlistPage"));
 const CartPage = lazy(() => import("../../pages/Cart/CartPage"));
 const CheckoutPage = lazy(() => import("../../pages/Checkout/CheckoutPage"));
 const OrderSuccessPage = lazy(() => import("../../pages/Checkout/OrderSuccessPage"));
+const OrderDetailPage = lazy(() => import("../../pages/Orders/OrderDetailPage"));
 const ProfileLayout = lazy(() => import("../../pages/Profile/ProfileLayout"));
 const ProfileDashboardPage = lazy(() => import("../../pages/Profile/ProfileDashboardPage"));
 const ProfileEditPage = lazy(() => import("../../pages/Profile/ProfileEditPage"));
@@ -74,6 +75,7 @@ const UserRoutes = () => {
                     <Route path={FRONTEND_ROUTES.CART} element={<CartPage />} />
                     <Route path={FRONTEND_ROUTES.CHECKOUT} element={<CheckoutPage />} />
                     <Route path={FRONTEND_ROUTES.ORDER_SUCCESS} element={<OrderSuccessPage />} />
+                    <Route path={FRONTEND_ROUTES.ORDER_DETAIL} element={<OrderDetailPage />} />
                     <Route path={FRONTEND_ROUTES.REWARDS} element={<ComingSoonPage />} />
 
                     {/* Profile area: shared sidebar / tab layout, each tab its own lazy chunk */}

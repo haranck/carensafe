@@ -31,6 +31,12 @@ class UserRepository {
         return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
+    // Ids of the users matching `filter` (built by the service), at most `limit`
+    async findIds(filter, limit = 200) {
+        const users = await User.find(filter).select('_id').limit(limit).lean();
+        return users.map((user) => user._id);
+    }
+
     updateById(userId, updateData) {
         return User.findByIdAndUpdate(userId, updateData, { returnDocument: 'after', runValidators: true });
     }
