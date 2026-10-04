@@ -1,7 +1,9 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { showsBottomNav } from "./HeaderParts/navConfig";
 import { ShieldCheck } from "lucide-react";
 
 export const Footer = () => {
+  const { pathname } = useLocation();
   return (
     <footer className="bg-[#2c265a] text-slate-300 py-10 px-4 sm:px-6 lg:px-8 font-sans border-t border-slate-700/50">
       <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -80,6 +82,8 @@ export const Footer = () => {
           ))}
         </div>
       </div>
+      {/* Room for the phone bottom tab bar, so the end of the footer isn't hidden behind it */}
+      {showsBottomNav(pathname) && <div aria-hidden="true" className="h-20 lg:hidden" />}
     </footer>
   );
 };

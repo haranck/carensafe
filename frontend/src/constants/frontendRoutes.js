@@ -9,7 +9,6 @@ export const FRONTEND_ROUTES = {
   // Storefront & account (pages not built yet; linked from the header)
   SHOP: "/shop",
   PRODUCT_DETAIL: "/product/:id", // build links with productDetailPath()
-  TECHNOLOGY: "/technology",
   CARE_SHORTS: "/care-shorts",
   ABOUT: "/about",
   CONTACT: "/contact",

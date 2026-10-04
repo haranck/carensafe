@@ -39,7 +39,7 @@ const HomeHero = ({ firstName, isGuest = false }) => (
         />
       </Link>
 
-      <div className="flex flex-col gap-3 border-t border-pink-100 bg-gradient-to-r from-[#fff5fa] via-white to-[#f5effd] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-5">
+      <div className="flex flex-col gap-3 border-t border-pink-100 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-5">
         <div className="min-w-0">
           {isGuest ? (
             <p className="text-[15px] font-extrabold text-[#1e1a3a] sm:text-[17px]">

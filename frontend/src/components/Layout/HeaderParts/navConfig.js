@@ -1,5 +1,6 @@
 import { Truck, ShieldCheck, Heart, Leaf, User, Package, Gift, Wallet } from "lucide-react";
 import { FRONTEND_ROUTES } from "../../../constants/frontendRoutes";
+import { matchPath } from "react-router-dom";
 
 export const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d6008a]/30";
@@ -17,7 +18,6 @@ export const TRUST_POINTS = [
 export const NAV_LINKS = [
   { label: "Home", to: FRONTEND_ROUTES.LANDING, authTo: FRONTEND_ROUTES.HOME },
   { label: "Shop", to: FRONTEND_ROUTES.SHOP },
-  { label: "Technology & Care", to: FRONTEND_ROUTES.TECHNOLOGY },
   { label: "Care Shorts", to: FRONTEND_ROUTES.CARE_SHORTS },
   { label: "About Us", to: FRONTEND_ROUTES.ABOUT },
   { label: "Contact", to: FRONTEND_ROUTES.CONTACT },
@@ -45,3 +45,7 @@ export const getInitials = (user) => {
   const last = user?.lastName?.trim()?.[0] || "";
   return (first + last).toUpperCase() || "U";
 };
+
+// Phones / tablets: the bottom tab bar is hidden on pages that pin their own action bar to the bottom
+const OWN_BOTTOM_BAR = [FRONTEND_ROUTES.CART, FRONTEND_ROUTES.CHECKOUT, FRONTEND_ROUTES.PRODUCT_DETAIL];
+export const showsBottomNav = (pathname) => !OWN_BOTTOM_BAR.some((pattern) => matchPath(pattern, pathname));

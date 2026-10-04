@@ -19,7 +19,7 @@ const AboutHero = ({ headingId }) => (
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className="grid items-stretch gap-8 overflow-hidden rounded-[2rem] border border-white bg-gradient-to-br from-[#ffe4f2] via-[#f8eeff] to-[#e9e0ff] shadow-[0_24px_60px_-30px_rgba(59,42,138,0.45)] lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
+      className="grid items-stretch gap-8 overflow-hidden rounded-[2rem] border border-pink-100 bg-[#fff5fa] shadow-[0_24px_60px_-30px_rgba(59,42,138,0.35)] lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
     >
       <div className="relative z-10 flex flex-col justify-center px-6 pt-8 sm:px-10 sm:pt-12 lg:py-14 lg:pl-14">
         <span className="inline-flex w-fit items-center gap-2 rounded-full border border-pink-200 bg-white/80 px-3.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.18em] text-[#d6008a]">
@@ -54,10 +54,6 @@ const AboutHero = ({ headingId }) => (
       </div>
 
       <div className="relative min-h-[340px] sm:min-h-[420px]">
-        <span
-          aria-hidden="true"
-          className="absolute bottom-0 left-1/2 h-[80%] w-[85%] -translate-x-1/2 rounded-t-full bg-[radial-gradient(ellipse_at_bottom,rgba(255,255,255,0.95)_0%,rgba(255,228,242,0.6)_50%,transparent_75%)]"
-        />
         <img
           src="/auth/girl-half-body-1080.webp"
           srcSet="/auth/girl-half-body-560.webp 560w, /auth/girl-half-body-1080.webp 1080w"

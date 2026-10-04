@@ -10,6 +10,7 @@ import NavLinks from "./HeaderParts/NavLinks";
 import HeaderActions from "./HeaderParts/HeaderActions";
 import SearchPanel from "./HeaderParts/SearchPanel";
 import MobileDrawer from "./HeaderParts/MobileDrawer";
+import MobileBottomNav from "./MobileBottomNav";
 import { FOCUS_RING } from "./HeaderParts/navConfig";
 import { usePrefetchShop } from "../../hooks/Shop/ShopHooks";
 import { runWhenIdle } from "../../utils/idle";
@@ -127,6 +128,7 @@ export const Header = () => {
       </AnimatePresence>
 
       <LogoutDialog open={isLogoutOpen} onClose={() => setIsLogoutOpen(false)} />
+      <MobileBottomNav />
     </LazyMotion>
   );
 };

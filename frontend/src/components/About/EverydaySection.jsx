@@ -17,8 +17,7 @@ const EverydaySection = () => {
   return (
     <Reveal aria-labelledby={headingId} className={`${CONTAINER} py-12 md:py-16`}>
       <div className="mx-auto grid max-w-[1100px] items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:gap-14">
-        <div className="relative mx-auto flex h-[380px] w-full max-w-[420px] items-end justify-center overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#ffe4f2] via-[#f8eeff] to-[#e9e0ff] sm:h-[460px]">
-          <span aria-hidden="true" className="absolute bottom-10 left-1/2 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.95)_0%,rgba(255,228,242,0.6)_50%,transparent_72%)]" />
+        <div className="relative mx-auto flex h-[380px] w-full max-w-[420px] items-end justify-center overflow-hidden rounded-[2rem] border border-pink-100 bg-[#fff5fa] sm:h-[460px]">
           <img
             src="/auth/girl-holding-pack.webp"
             alt="Young woman in a pink dress holding a Care N Safe pack"

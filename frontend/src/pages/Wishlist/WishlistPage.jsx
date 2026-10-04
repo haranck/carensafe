@@ -62,7 +62,7 @@ const UndoToast = ({ onUndo }) => (
     <button
       type="button"
       onClick={onUndo}
-      className="inline-flex h-9 flex-shrink-0 items-center rounded-full bg-white/10 px-3.5 text-[13px] font-bold text-pink-200 hover:bg-white/20 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300/60"
+      className="inline-flex h-9 flex-shrink-0 items-center rounded-full bg-[#fff5fa] px-3.5 text-[13px] font-bold text-[#d6008a] hover:bg-pink-100 hover:text-[#9d0063] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d6008a]/30"
     >
       Undo
     </button>

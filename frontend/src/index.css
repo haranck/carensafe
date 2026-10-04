@@ -7,6 +7,13 @@
 /* Tailwind theme tokens → generates the `font-accent` utility (italic serif accent words) */
 @theme {
   --font-accent: "Playfair Display", Georgia, "Times New Roman", serif;
+  /* `animate-toast-progress`: the toast's time-left bar (AppToast sets the length) */
+  --animate-toast-progress: toast-progress 3s linear forwards;
+
+  @keyframes toast-progress {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+  }
 }
 
 /* ─── CSS Custom Properties / Design Tokens ─────────────────────────────── */

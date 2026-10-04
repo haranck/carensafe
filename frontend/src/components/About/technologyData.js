@@ -7,7 +7,7 @@ import { Atom, Droplets, Hexagon, Layers, Leaf, Magnet, ShieldCheck, Sparkles, S
 export const TECHNOLOGIES = [
   {
     title: "100% Breathable Front & Back Sheets",
-    image: "/about/about1-feat-breathable.jpg",
+    image: "/about/web/about1-feat-breathable.webp",
     icon: Wind,
     points: ["Allows air circulation.", "Reduces moisture and heat build-up.", "Keeps skin cool and irritation-free."],
     benefit: "Fresh, dry comfort even on long use.",
@@ -15,7 +15,7 @@ export const TECHNOLOGIES = [
   },
   {
     title: "Far Infrared (FIR) Technology",
-    image: "/about/about2-feat-infrared.jpg",
+    image: "/about/web/about2-feat-infrared.webp",
     icon: Sun,
     points: ["Responds to body warmth.", "Supports comfort and circulation."],
     benefit: "Helps ease discomfort and supports a soothing feel.",
@@ -23,7 +23,7 @@ export const TECHNOLOGIES = [
   },
   {
     title: "Anion (Negative Ion) Layer",
-    image: "/about/about3-feat-anion.jpg",
+    image: "/about/web/about3-feat-anion.webp",
     icon: Atom,
     points: ["Releases natural negative ions.", "Supports cleanliness by reducing odor-causing microbes."],
     benefit: "Refreshing sensation and odor control.",
@@ -31,7 +31,7 @@ export const TECHNOLOGIES = [
   },
   {
     title: "Nano Silver Layer",
-    image: "/about/about4-feat-nano.jpg",
+    image: "/about/web/about4-feat-nano.webp",
     icon: Sparkles,
     points: ["Naturally antibacterial.", "Helps limit growth of harmful microbes on the pad surface."],
     benefit: "Cleaner feel and extra hygiene support.",
@@ -39,7 +39,7 @@ export const TECHNOLOGIES = [
   },
   {
     title: "High Absorption SAP Core",
-    image: "/about/about5-feat-sap.jpg",
+    image: "/about/web/about5-feat-sap.webp",
     icon: Droplets,
     points: ["Uses Japan Sumitomo SAP for efficient liquid locking.", "Rapid absorbency and excellent leak control."],
     benefit: "Keeps surface dry and prevents leaks.",
@@ -47,7 +47,7 @@ export const TECHNOLOGIES = [
   },
   {
     title: "9-Layer Protection System",
-    image: "/about/about6-feat-layers.jpg",
+    image: "/about/web/about6-feat-layers.webp",
     icon: Layers,
     points: ["Multiple protective layers work together to prevent breakthroughs.", "Ensures maximum absorption and leak resistance."],
     benefit: "Confidence even on heavy-flow days.",
@@ -55,7 +55,7 @@ export const TECHNOLOGIES = [
   },
   {
     title: "Graphene Layer",
-    image: "/about/about7-feat-graphene.jpg",
+    image: "/about/web/about7-feat-graphene.webp",
     icon: Hexagon,
     points: ["Lightweight nano material.", "Improves flexibility and adaptability of the pad."],
     benefit: "Strength and comfort without bulk.",
@@ -63,7 +63,7 @@ export const TECHNOLOGIES = [
   },
   {
     title: "Magnetic Comfort Layer",
-    image: "/about/about8-feat-magnetic.jpg",
+    image: "/about/web/about8-feat-magnetic.webp",
     icon: Magnet,
     points: ["Gentle magnetic effect.", "Designed to support ease and comfort during wear."],
     benefit: "Enhanced comfort sensation.",
@@ -71,7 +71,7 @@ export const TECHNOLOGIES = [
   },
   {
     title: "Tea Polyphenols (Green Tea Extract)",
-    image: "/about/about9-feat-tea.jpg",
+    image: "/about/web/about9-feat-tea.webp",
     icon: Leaf,
     points: ["Natural antioxidants.", "Helps neutralize odor and inhibits bacterial growth."],
     benefit: "Maintains a fresher feel and better intimate hygiene.",
@@ -79,7 +79,7 @@ export const TECHNOLOGIES = [
   },
   {
     title: "Chitosan Layer",
-    image: "/about/about10-feat-chitin.jpg",
+    image: "/about/web/about10-feat-chitin.webp",
     icon: Sprout,
     points: ["Natural bio-polymer.", "Helps manage odor and contributes to antimicrobial effects."],
     benefit: "Added layer of gentle protection and freshness.",
@@ -87,7 +87,7 @@ export const TECHNOLOGIES = [
   },
   {
     title: "No Harmful Chemicals",
-    image: "/about/about11-feat-organic.jpg",
+    image: "/about/web/about11-feat-organic.webp",
     icon: ShieldCheck,
     points: ["Free from harmful toxins, perfumes, bleach, or harsh additives.", "Verified with lab report claims."],
     benefit: "Safer, gentle for most sensitive skin types.",

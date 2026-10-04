@@ -47,7 +47,7 @@ const HeaderActions = ({
         title="Search"
         aria-expanded={isSearchOpen}
         aria-controls={searchId}
-        className={`hidden lg:inline-flex xl:hidden ${ICON_BUTTON}`}
+        className={`inline-flex xl:hidden ${ICON_BUTTON}`}
       >
         {isSearchOpen ? <X size={19} strokeWidth={1.9} /> : <Search size={19} strokeWidth={1.9} />}
       </button>
