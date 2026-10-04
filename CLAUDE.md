@@ -1,7 +1,7 @@
 # CLAUDE.md — Care N Safe
 
-E-commerce app for an organic sanitary-pad brand: customer storefront + admin portal (users, partners
-hierarchy AREA_MANAGER → DISTRIBUTOR → PROMOTER, products with variants). Two independent apps:
+E-commerce app for an organic sanitary-pad brand: customer storefront + admin portal (users, products
+with variants). Two independent apps:
 
 ```
 carensafe/
@@ -25,6 +25,7 @@ carensafe/
   `REFRESH_TOKEN_MAX_AGE`, `CLOUDINARY_*`). `utils/email.js` reads `SMTP_*`/`EMAIL_FROM` directly; without
   `SMTP_USER` the OTP is only logged to the console (`[Mock Email]`).
 - Frontend needs `VITE_API_BASE_URL` pointing at the API **including `/api`** (API_ROUTES start at `/user/...`).
+  Optional: `VITE_GOOGLE_CLIENT_ID` (Google button), `VITE_MAPBOX_ACCESS_TOKEN` (public `pk.` token, address map).
 - Always import env via `require('../config/envValidation')`, not `process.env`.
 
 ---
@@ -38,11 +39,13 @@ app.js mount → routes → middlewares → controller → service → repositor
                 (validation/upload/auth)   (req/res)   (logic)    (Mongoose)
 ```
 
-Mounted in `src/app.js`: `/api/user/auth`, `/api/admin/auth`, `/api/admin/users`, `/api/admin/products`.
+Mounted in `src/app.js`: `/api/user/auth`, `/api/user/products`, `/api/user/wishlist`, `/api/user/cart`,
+`/api/user/profile` (the `user/user` route/controller/service files), `/api/user/addresses`,
+`/api/admin/auth`, `/api/admin/users`, `/api/admin/products`.
 `globalErrorHandler` is registered last.
 
-> The `user/user` feature files (`user.routes.js`, `user.controller.js`, `user.service.js`) are **empty**.
-> The working reference flow is **user auth**: `routes/user/auth/auth.routes.js` →
+> The `user/user` feature files (`user.routes.js`, `user.controller.js`, `user.service.js`) are the profile API
+> (mounted at `/api/user/profile`). The reference flow is **user auth**: `routes/user/auth/auth.routes.js` →
 > `controllers/user/auth/auth.controller.js` → `services/user/auth/auth.service.js` →
 > `repositories/user/user.repository.js` → `models/user.model.js`. For admin CRUD with pagination copy
 > `admin.user.*`.
@@ -52,7 +55,7 @@ Mounted in `src/app.js`: `/api/user/auth`, `/api/admin/auth`, `/api/admin/users`
 **Routes**: wiring only: path, middlewares, then an arrow wrapper to the controller instance:
 ```js
 router.post('/login', validateLogin, (req, res) => authController.login(req, res));
-router.post('/partner', upload.single('avatar'), (req, res) => adminUserController.createPartner(req, res));
+router.put('/:id/variants/:variantId', upload.any(), (req, res) => adminProductController.updateVariant(req, res));
 ```
 No logic, no DB, no response building.
 
@@ -100,7 +103,7 @@ res.status(200).json({ success: true, message, data: result.data,
 res.status(statusCode).json({ success: false, message });
 ```
 201 for creates. Never send `password` or `refreshToken` in a body. Login returns
-`data: { user: { id, firstName, lastName, email, role, isAdmin }, accessToken }` plus an httpOnly
+`data: { user: { id, firstName, lastName, email, avatarUrl, isAdmin }, accessToken }` plus an httpOnly
 `refreshToken` cookie (`sameSite: 'strict'`, `secure` in production, `maxAge: env.REFRESH_TOKEN_MAX_AGE`).
 
 ### Errors
@@ -124,12 +127,13 @@ forwards rejected promises). Same JSON shape. Keep the controller try/catch patt
 
 ### Auth
 
-- `utils/jwt.js` signs `{ userId, role }`. Access token 15m, refresh 7d. Refresh rotation and logout
+- `utils/jwt.js` signs `{ userId }` (there are no roles; admins are `isAdmin: true`). Access token 15m, refresh 7d. Refresh rotation and logout
   blacklist the old token in Redis (`blacklist:<token>`).
 - `middlewares/auth.middleware.js` (default export) expects `Authorization: Bearer <token>`, verifies it and sets
-  **`req.user = { userId, role, iat, exp }`**. 401 `{ success:false, message }` otherwise. It does **not**
-  check `isBlocked` or `isAdmin`. It's currently not mounted anywhere (see Known issues). Protect new user
-  routes with it: `router.get('/', authMiddleware, (req, res) => ...)` and read `req.user.userId`.
+  **`req.user = { userId }`**. 401 `{ success:false, message }` otherwise. On every request it also calls
+  `authService.verifyActiveUser`: deleted user → 401 "User no longer exists.", blocked → 403 "Your account is blocked."
+  (same text as login/refresh and `USER_ERRORS.USER_BLOCKED`). It does **not** check `isAdmin`. Used by the wishlist and
+  cart routes. Protect new user routes with it: `router.get('/', authMiddleware, (req, res) => ...)` and read `req.user.userId`.
 - Signup is a two-step OTP flow. Pending signup data lives in Redis `signup:<email>` (300s) with
   `otp_attempts:<email>` (max 3). The user is created only in `verifyOtp`.
 
@@ -228,7 +232,7 @@ Pattern from `components/Auth/LoginForm.jsx`:
 - Submit calls `mutate(data, { onSuccess, onError })`. Show the API error from
   `error?.response?.data?.message`. Disable the submit button and show a spinner while `isPending`.
 - Mirror the backend Joi rules exactly (password: min 8, upper, lower, digit, special char).
-- `AdminAddProductPage` and `AdminPartnerManagementPage` use hand-rolled `useState` forms. That's legacy; new forms use RHF + zod.
+- `AdminAddProductPage` uses a hand-rolled `useState` form. That's legacy; new forms use RHF + zod.
 - File uploads: build `FormData` and let the service send it (see `createProduct`, `updateVariant`).
 
 ### Constants
@@ -298,7 +302,7 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - **No new npm packages** (either app) without asking first. Everything listed in package.json is available.
 - Before any change touching more than ~2 files, or both apps, write a short plan (files + what changes) and get confirmation.
 - After changes: frontend `npm run lint` + `npm run build`; backend `node -e "require('./src/app')"`.
-  Lint has a pre-existing baseline of 17 errors / 2 warnings, so don't add new ones and report the before/after.
+  Lint has a pre-existing baseline of 14 errors / 1 warning, so don't add new ones and report the before/after.
 - Backend stays CommonJS (`require`/`module.exports`), frontend stays ESM `.jsx`/`.js`. No TypeScript files.
 - Never read, edit, print or commit `.env` files or secrets; never hardcode credentials or URLs that belong in env.
   Add new env vars to `envValidation.js` and tell the user which to set.
@@ -315,28 +319,34 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
   (`admin.auth.service`) returns no token, and `AdminLoginForm` just navigates. `/admin/*` frontend routes have no guard.
 - Global rate limiter is commented out in `app.js`; login/OTP endpoints are unthrottled.
 - OTP brute-force guard is weak: a wrong attempt resets `otp_attempts:<email>` TTL to 30s while the signup key lives 300s.
-- `authMiddleware` ignores `isBlocked`, so blocked users keep access until the access token expires.
 - `frontend/.env` is tracked in git (`frontend/.gitignore` doesn't ignore `.env`).
-- Frontend logout only clears Redux; it never calls `/user/auth/logout`, so the refresh cookie stays valid.
+- Logout (`hooks/Auth/useLogout.js`) blacklists only the refresh token: the access token stays valid for up to 15 min.
+- `services/user/auth/email.service.js` logs every OTP to the server console (`[Console] Generated OTP`).
+- Product images upload to `carensafe/products` (avatars use their own `avatarUpload` → `carensafe/avatars`).
 
 **Bugs**
 - `infrastructure/cache/redisClient.js` falls back to `env.REDIS_HOST/REDIS_PORT`, which `envValidation.js` never
   exports (`parseRedisHost/parseRedisPort` are unused). It only works because ioredis defaults to localhost:6379.
 - OTP email text says "expires in 30 seconds"; actual TTL is 300s.
-- `USER_ERRORS.USER_BLOCKED = "User is blocked"` doesn't match the backend ("Your account is blocked."), so the
-  axios blocked-user redirect never fires (and the backend returns 403 there only on login/refresh).
 - Signup zod schema is weaker than Joi (no lowercase/special-char rule), so the server rejects passwords the form accepts.
 - `ProductModal.jsx` calls hooks after an early `return null` (rules-of-hooks) and imports via `'../../../src/hooks/...'`.
 - `AdminProductsPage` calls `toast.error` during render. `keepPreviousData: true` in `AdminHooks.js` is ignored (v5).
 - `AdminDashboardPage` uses dynamic Tailwind classes (`bg-${statusColor}-50`) and hardcoded mock stats/orders.
-- Partners created without a password make `bcrypt.compare` throw on login → 500 instead of 401.
+- Admin login (`admin.auth.service`) still calls `bcrypt.compare` for users without a password → 500 instead of 401
+  (user login now answers 400 "This account uses Google sign-in...").
 - Cloudinary uploads happen before controller validation; rejected requests and removed variant images are never
-  deleted (orphans). Partner avatars go into the `carensafe/products` folder.
+  deleted (orphans).
 
 **Structure / inconsistencies**
-- Empty, unmounted stubs: `routes/user/user/user.routes.js`, `controllers/user/user/user.controller.js`,
-  `services/user/user/user.service.js`, `routes/user/order/order.routes.js`, `routes/user/products/products.routes.js`.
-  No order/cart model, controller or service exists.
+- Empty, unmounted stub: `routes/user/order/order.routes.js`. Orders in the profile area are mock data
+  (`constants/mockOrders.js`, read via `useGetMyOrders`). There is no wallet backend (the Wallet tab shows ₹0.00).
+  No order model, controller or service exists (the cart does: `/api/user/cart`, shipping rules in `config/shipping.js`).
+  `/checkout` is a **demo** (`pages/Checkout/*`): Place Order waits 1.5s and opens `/order-success` with the order in router
+  state; nothing is saved, no payment is taken and the cart isn't cleared. Money rows come from `utils/checkout.js` `checkoutTotals`.
+- Addresses can carry an optional map pin: `location` GeoJSON Point **[lng, lat]** (2dsphere index, Joi rejects points
+  outside India) + `formattedAddress`. The address form's map (`components/Address/LocationPicker.jsx`, lazy `mapbox-gl`)
+  and reverse geocoding need `VITE_MAPBOX_ACCESS_TOKEN`; without it the location section is hidden. Pincodes are checked
+  against India Post (`constants/externalApis.js`), failing open when it's down.
 - `repositories/admin/` is empty; admin services use `repositories/user/*`. `repositories/user/auth/auth.repository.js`
   duplicates `user.repository.js` and is used only by `admin.auth.service.js`. `AuthService.adminLogin` is dead code
   duplicating `AdminAuthService.adminLogin`.
@@ -346,8 +356,6 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
   devDeps with no TS in the project. There's no backend lint or tests anywhere.
 - `backend/test_real.png` (1×1 test image) is committed in the backend root.
 - Frontend: flat `services/AdminService.js` + single `hooks/Admin/AdminHooks.js` instead of per-feature folders.
-  Partner hooks don't exist, and `AdminPartnerManagementPage` calls services directly with manual `useState`
-  fetching and its own pagination UI.
 - Service and hook file casing is mixed (`Auth/authService.js`, `AdminService.js`, `AuthHooks.js`).
 - `AdminRoutes.jsx` redefines a local `FRONTEND_ROUTES`. Many paths are hardcoded (`"/home"`, `"/admin/products"`,
   axios `/user/auth/refresh`). `FRONTEND_ROUTES` lacks the admin sub-pages.

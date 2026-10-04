@@ -21,9 +21,22 @@ const userSchema = new mongoose.Schema(
             trim: true
         },
 
+        // Google-only accounts have no password
         password: {
             type: String,
-            required: false
+            required: [function () { return this.authProvider === 'local'; }, 'Password is required']
+        },
+
+        googleId: {
+            type: String,
+            unique: true,
+            sparse: true
+        },
+
+        authProvider: {
+            type: String,
+            enum: ['local', 'google'],
+            default: 'local'
         },
 
         phone: {
@@ -40,25 +53,14 @@ const userSchema = new mongoose.Schema(
             type: String
         },
 
-        role: {
-            type: String,
-            enum: ['USER', 'AREA_MANAGER', 'DISTRIBUTOR', 'PROMOTER'],
-            default: 'USER'
+        // Cloudinary id of an uploaded avatar (none for Google photos), so it can be deleted when replaced
+        avatarPublicId: {
+            type: String
         },
 
-        distributorId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            default: null
-        },
         isAdmin: {
             type: Boolean,
             default: false
-        },
-        areaManagerId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            default: null
         }
     },
     {

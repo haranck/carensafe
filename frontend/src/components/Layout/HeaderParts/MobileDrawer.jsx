@@ -8,9 +8,9 @@ import {
   ACCOUNT_LINKS,
   BRAND_GRADIENT,
   FOCUS_RING,
-  getInitials,
   resolveNavPath,
 } from "./navConfig";
+import UserAvatar from "../../common/UserAvatar";
 
 const SectionTitle = ({ children }) => (
   <p className="px-3 mb-1.5 text-[10.5px] font-bold uppercase tracking-widest text-slate-400">{children}</p>
@@ -104,35 +104,13 @@ const MobileDrawer = ({ id, isLoggedIn, user, onClose, onLogout }) => {
             </div>
           </form>
 
-          {isLoggedIn ? (
+          {isLoggedIn && (
             <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-violet-50 to-pink-50 border border-violet-100">
-              <span
-                aria-hidden="true"
-                className="w-11 h-11 flex-shrink-0 rounded-full bg-gradient-to-br from-[#3b2a8a] via-[#7c3aed] to-[#d6008a] text-white text-[14px] font-bold flex items-center justify-center"
-              >
-                {getInitials(user)}
-              </span>
+              <UserAvatar user={user} className="w-11 h-11 text-[14px]" />
               <div className="min-w-0">
                 <p className="text-[14.5px] font-bold text-[#1e1a3a] truncate">{fullName}</p>
                 {user?.email && <p className="text-[12px] text-slate-500 truncate">{user.email}</p>}
               </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2.5">
-              <Link
-                to={FRONTEND_ROUTES.LOGIN}
-                onClick={onClose}
-                className={`flex items-center justify-center h-11 rounded-full border border-slate-200 bg-white text-[14px] font-semibold text-[#1e1a3a] hover:border-[#d6008a] hover:text-[#d6008a] transition-colors ${FOCUS_RING}`}
-              >
-                Login
-              </Link>
-              <Link
-                to={FRONTEND_ROUTES.SIGNUP}
-                onClick={onClose}
-                className={`flex items-center justify-center h-11 rounded-full text-[14px] font-bold text-white ${BRAND_GRADIENT} shadow-[0_4px_14px_rgba(214,0,138,0.25)] ${FOCUS_RING}`}
-              >
-                Sign Up
-              </Link>
             </div>
           )}
 
@@ -182,8 +160,9 @@ const MobileDrawer = ({ id, isLoggedIn, user, onClose, onLogout }) => {
           )}
         </div>
 
-        {isLoggedIn && (
-          <div className="p-4 border-t border-violet-100 bg-white">
+        {/* Bottom bar: Logout for members, Login / Sign Up for guests */}
+        <div className="p-4 border-t border-violet-100 bg-white">
+          {isLoggedIn ? (
             <button
               type="button"
               onClick={() => {
@@ -195,8 +174,25 @@ const MobileDrawer = ({ id, isLoggedIn, user, onClose, onLogout }) => {
               <LogOut size={16} aria-hidden="true" />
               Logout
             </button>
-          </div>
-        )}
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5">
+              <Link
+                to={FRONTEND_ROUTES.LOGIN}
+                onClick={onClose}
+                className={`flex items-center justify-center h-11 rounded-full border border-slate-200 bg-white text-[14px] font-semibold text-[#1e1a3a] hover:border-[#d6008a] hover:text-[#d6008a] transition-colors ${FOCUS_RING}`}
+              >
+                Login
+              </Link>
+              <Link
+                to={FRONTEND_ROUTES.SIGNUP}
+                onClick={onClose}
+                className={`flex items-center justify-center h-11 rounded-full text-[14px] font-bold text-white ${BRAND_GRADIENT} shadow-[0_4px_14px_rgba(214,0,138,0.25)] ${FOCUS_RING}`}
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
+        </div>
       </m.aside>
     </>
   );

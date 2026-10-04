@@ -13,6 +13,15 @@ class UserRepository {
         return User.findOne({ email: email.toLowerCase() });
     }
 
+    // Only what authMiddleware needs on every request
+    findStatusById(userId) {
+        return User.findById(userId).select('isBlocked').lean();
+    }
+
+    findByGoogleId(googleId) {
+        return User.findOne({ googleId });
+    }
+
     async findAll(filter = {}, page = 1, limit = 10) {
         const skip = (page - 1) * limit;
         const [data, total] = await Promise.all([
@@ -22,16 +31,8 @@ class UserRepository {
         return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
-    findByRole(role) {
-        return User.find({ role });
-    }
-
     updateById(userId, updateData) {
         return User.findByIdAndUpdate(userId, updateData, { returnDocument: 'after', runValidators: true });
-    }
-
-    updateRole(userId, role) {
-        return User.findByIdAndUpdate(userId, { role }, { returnDocument: 'after', runValidators: true });
     }
 
     updateBlockStatus(userId, isBlocked) {
@@ -44,18 +45,6 @@ class UserRepository {
 
     existsByEmail(email) {
         return User.exists({ email: email.toLowerCase() });
-    }
-
-    findPromotersByDistributor(distributorId) {
-        return User.find({ role: 'PROMOTER', distributorId });
-    }
-
-    findPromotersByAreaManager(areaManagerId) {
-        return User.find({ role: 'PROMOTER', areaManagerId });
-    }
-
-    findDistributorsByAreaManager(areaManagerId) {
-        return User.find({ role: 'DISTRIBUTOR', areaManagerId });
     }
 }
 

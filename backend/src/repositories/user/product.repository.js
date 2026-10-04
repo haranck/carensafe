@@ -23,38 +23,60 @@ class ProductRepository {
         return Product.find({ isActive: true }).sort({ createdAt: -1 });
     }
 
-    // Storefront listing: one item per active variant of an active product.
-    // `filter` and `sort` apply to the flattened item fields (name, productName, price, createdAt, ...).
-    async findActiveVariantsPaginated(filter = {}, sort = { createdAt: -1, _id: 1 }, page = 1, limit = 12) {
+    // One card per active variant that passes `variantFilter` (an expression on `$$v`), so every size/pack is
+    // listed on its own with its own price, stock and images
+    async findActiveProductsPaginated({ match = {}, variantFilter = true, sort = { createdAt: -1, _id: 1 }, page = 1, limit = 12 }) {
         const skip = (page - 1) * limit;
         const [result] = await Product.aggregate([
-            { $match: { isActive: true } },
+            { $match: { isActive: true, ...match } },
             { $unwind: '$variants' },
             { $match: { 'variants.isActive': true } },
+            { $match: { $expr: { $let: { vars: { v: '$variants' }, in: variantFilter } } } },
             {
                 $project: {
-                    _id: '$variants._id',
-                    productId: '$_id',
-                    productName: '$name',
-                    name: '$variants.name',
-                    size: '$variants.size',
-                    price: '$variants.price',
-                    stock: '$variants.stock',
-                    image: { $arrayElemAt: ['$variants.images.url', 0] },
-                    createdAt: '$createdAt'
+                    name: 1,
+                    createdAt: 1,
+                    minPrice: '$variants.price',
+                    maxPrice: '$variants.price',
+                    sizes: ['$variants.size'],
+                    inStock: { $gt: ['$variants.stock', 0] },
+                    defaultVariant: {
+                        _id: '$variants._id',
+                        name: '$variants.name',
+                        size: '$variants.size',
+                        price: '$variants.price',
+                        stock: '$variants.stock',
+                        images: { $slice: ['$variants.images.url', 2] }
+                    }
                 }
             },
-            { $match: filter },
-            { $sort: sort },
+            // Variants of one product share its _id: keep their order stable across pages
+            { $sort: { ...sort, 'defaultVariant._id': 1 } },
             {
                 $facet: {
                     data: [{ $skip: skip }, { $limit: limit }],
                     total: [{ $count: 'count' }]
                 }
             }
-        ]);
+        ]).collation({ locale: 'en', strength: 2 });
         const total = result.total[0]?.count || 0;
         return { data: result.data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    }
+
+    // Only what the shop filter options need
+    findActiveForFilters() {
+        return Product.find({ isActive: true })
+            .select('name variants.size variants.price variants.isActive')
+            .lean();
+    }
+
+    // Newest active products with their variants (cart recommendations)
+    findActiveNewest(limit) {
+        return Product.find({ isActive: true })
+            .sort({ createdAt: -1, _id: 1 })
+            .limit(limit)
+            .select('name isActive createdAt variants')
+            .lean();
     }
 
     findActiveById(productId) {

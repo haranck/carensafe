@@ -4,7 +4,7 @@ const env = require('../config/envValidation');
 class JwtUtil {
     generateAccessToken(user) {
         return jwt.sign(
-            { userId: user._id, role: user.role },
+            { userId: user._id },
             env.JWT_ACCESS_SECRET,
             { expiresIn: env.JWT_ACCESS_EXPIRES_IN }
         );
@@ -12,7 +12,7 @@ class JwtUtil {
 
     generateRefreshToken(user) {
         return jwt.sign(
-            { userId: user._id, role: user.role },
+            { userId: user._id },
             env.JWT_REFRESH_SECRET,
             { expiresIn: env.JWT_REFRESH_EXPIRES_IN }
         );

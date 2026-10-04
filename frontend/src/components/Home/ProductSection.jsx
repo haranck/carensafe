@@ -30,7 +30,7 @@ const ProductSection = ({ heading, params, layout = "carousel", action, classNam
   const skeletons = Array.from({ length: SKELETON_COUNT[layout] }, (_, i) => (
     <ProductCardSkeleton key={i} layout={cardLayout} />
   ));
-  const cards = items.map((item) => <ProductCard key={item._id} item={item} layout={cardLayout} />);
+  const cards = items.map((item) => <ProductCard key={`${item._id}-${item.defaultVariant._id}`} item={item} layout={cardLayout} />);
 
   let content;
   if (isError) {

@@ -24,12 +24,20 @@ app.use(cookieParser());
 
 const authRoutes = require('./routes/user/auth/auth.routes');
 const productsRoutes = require('./routes/user/products/products.routes');
+const wishlistRoutes = require('./routes/user/wishlist/wishlist.routes');
+const cartRoutes = require('./routes/user/cart/cart.routes');
+const profileRoutes = require('./routes/user/user/user.routes');
+const addressRoutes = require('./routes/user/address/address.routes');
 const adminAuthRoutes = require('./routes/admin/admin.auth.routes');
 const adminUserRoutes = require('./routes/admin/admin.user.routes');
 const adminProductRoutes = require('./routes/admin/admin.product.routes');
 
 app.use('/api/user/auth', authRoutes);
 app.use('/api/user/products', productsRoutes);
+app.use('/api/user/wishlist', wishlistRoutes);
+app.use('/api/user/cart', cartRoutes);
+app.use('/api/user/profile', profileRoutes);
+app.use('/api/user/addresses', addressRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/products', adminProductRoutes);

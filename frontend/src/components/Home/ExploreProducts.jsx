@@ -8,15 +8,15 @@ import SectionError from "./SectionError";
 import Reveal from "./Reveal";
 import { BRAND_GRADIENT, CONTAINER, CONTAINER_BLEED, FOCUS_RING } from "../../constants/customerTheme";
 
-// Values match the API's `category` filter
+// Same choices as the shop's quick chips (API `category` / `combo` filters)
 const CATEGORY_TABS = [
-  { value: "", label: "All" },
-  { value: "sanitary_pads", label: "Sanitary Pads" },
-  { value: "combo_packs", label: "Combo Packs" },
+  { value: "", label: "All", params: {} },
+  { value: "sanitary_pads", label: "Sanitary Pads", params: { category: "sanitary_pads" } },
+  { value: "combo_packs", label: "Combo Packs", params: { combo: true } },
 ];
 
 const PAGE_SIZE = 10;
-const MAX_LIMIT = 50; // API caps limit at 50
+const MAX_LIMIT = 48; // API caps limit at 48
 
 const GRID = "grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 
@@ -26,8 +26,9 @@ const ExploreProducts = () => {
   const [pages, setPages] = useState(1);
   const limit = Math.min(PAGE_SIZE * pages, MAX_LIMIT);
 
+  const tabParams = CATEGORY_TABS.find((tab) => tab.value === category).params;
   const { data, isLoading, isError, isFetching, isPlaceholderData, refetch } = useGetProducts({
-    category,
+    ...tabParams,
     limit,
     sort: "newest",
   });
@@ -77,7 +78,7 @@ const ExploreProducts = () => {
       <>
         <div className={`${GRID} transition-opacity duration-200 ${isPlaceholderData ? "opacity-60" : "opacity-100"}`}>
           {items.map((item) => (
-            <ProductCard key={item._id} item={item} />
+            <ProductCard key={`${item._id}-${item.defaultVariant._id}`} item={item} />
           ))}
         </div>
         <div className="mt-8 flex flex-col items-center gap-3">

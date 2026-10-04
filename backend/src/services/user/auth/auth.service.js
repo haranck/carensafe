@@ -1,9 +1,21 @@
+const crypto = require('crypto');
 const userRepository = require('../../../repositories/user/user.repository');
 const passwordUtil = require('../../../utils/password');
 const otpUtil = require('../../../utils/otp');
 const redisUtil = require('../../../utils/redis');
 const jwtUtil = require('../../../utils/jwt');
-const emailUtil = require('../../../utils/email');
+const googleUtil = require('../../../utils/google');
+const emailService = require('./email.service');
+
+const RESET_OTP_TTL = 300; // seconds, same as the signup OTP
+const RESET_COOLDOWN = 30; // seconds between "send code" requests
+const RESET_TOKEN_TTL = 600; // seconds to choose the new password after the code is verified
+const MAX_RESET_ATTEMPTS = 3;
+const RESET_SENT_MESSAGE = "If an account exists for this email, we've sent a verification code.";
+
+const resetOtpKey = (email) => `password_reset:${email}`;
+const resetCooldownKey = (email) => `password_reset_cooldown:${email}`;
+const resetTokenKey = (token) => `password_reset_token:${token}`;
 
 class AuthService {
     async signup({ firstName, lastName, email, password, phone }) {
@@ -41,8 +53,8 @@ class AuthService {
         // Reset attempts
         await redisUtil.setEx(attemptsKey, expirationTime, 0);
 
-        // 5. Send OTP via actual Email Utility
-        await emailUtil.sendOtpEmail(normalizedEmail, otp);
+        // 5. Send OTP via Email Service
+        await emailService.sendOtpEmail(normalizedEmail, otp);
 
         return {
             message: 'OTP sent to email. Verification required to complete signup.',
@@ -76,7 +88,7 @@ class AuthService {
         await redisUtil.setEx(redisKey, expirationTime, signupData);
         await redisUtil.setEx(attemptsKey, expirationTime, 0);
 
-        await emailUtil.sendOtpEmail(normalizedEmail, otp);
+        await emailService.sendOtpEmail(normalizedEmail, otp);
 
         return {
             message: 'OTP resent successfully.',
@@ -139,7 +151,6 @@ class AuthService {
             email: signupData.email,
             password: signupData.hashedPassword,
             phone: signupData.phone,
-            role: 'USER',
             isAdmin: false
         });
 
@@ -175,6 +186,13 @@ class AuthService {
             throw error;
         }
 
+        // Google-only accounts have no password (bcrypt.compare would throw)
+        if (!user.password) {
+            const error = new Error('This account uses Google sign-in. Continue with Google, or use Forgot Password to create a password.');
+            error.statusCode = 400;
+            throw error;
+        }
+
         const isPasswordValid = await passwordUtil.compare(password, user.password);
         if (!isPasswordValid) {
             const error = new Error('Invalid email or password');
@@ -191,7 +209,81 @@ class AuthService {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
-                role: user.role,
+                avatarUrl: user.avatarUrl,
+                isAdmin: user.isAdmin
+            },
+            accessToken,
+            refreshToken
+        };
+    }
+
+    async googleLogin(code) {
+        // Only the verified id_token payload is trusted, never profile data from the client
+        const payload = await googleUtil.verifyGoogleCode(code);
+
+        if (!payload.email || !payload.email_verified) {
+            const error = new Error('Your Google email is not verified.');
+            error.statusCode = 401;
+            throw error;
+        }
+
+        const normalizedEmail = payload.email.trim().toLowerCase();
+
+        let user = await userRepository.findByGoogleId(payload.sub);
+        if (!user) {
+            user = await userRepository.findByEmail(normalizedEmail);
+        }
+
+        if (user) {
+            if (user.isAdmin) {
+                const error = new Error('Admins are not allowed to log in from the user portal.');
+                error.statusCode = 403;
+                throw error;
+            }
+
+            if (user.isBlocked) {
+                const error = new Error('Your account is blocked.');
+                error.statusCode = 403;
+                throw error;
+            }
+
+            if (user.googleId && user.googleId !== payload.sub) {
+                const error = new Error('This email is linked to a different Google account.');
+                error.statusCode = 409;
+                throw error;
+            }
+
+            // Existing email account: link Google (accounts with a password stay 'local' and keep password login)
+            if (!user.googleId) {
+                const updateData = { googleId: payload.sub };
+                if (!user.password) updateData.authProvider = 'google';
+                if (!user.avatarUrl && payload.picture) updateData.avatarUrl = payload.picture;
+
+                user = await userRepository.updateById(user._id, updateData);
+            }
+        } else {
+            // New user: Google already verified the email, so no OTP step
+            user = await userRepository.create({
+                firstName: payload.given_name || payload.name || normalizedEmail.split('@')[0],
+                lastName: payload.family_name,
+                email: normalizedEmail,
+                googleId: payload.sub,
+                authProvider: 'google',
+                avatarUrl: payload.picture,
+                isAdmin: false
+            });
+        }
+
+        const accessToken = jwtUtil.generateAccessToken(user);
+        const refreshToken = jwtUtil.generateRefreshToken(user);
+
+        return {
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                avatarUrl: user.avatarUrl,
                 isAdmin: user.isAdmin
             },
             accessToken,
@@ -222,8 +314,7 @@ class AuthService {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
-                isAdmin: user.isAdmin,
-                role: user.role
+                isAdmin: user.isAdmin
             }
         };
     }
@@ -259,7 +350,7 @@ class AuthService {
             throw error;
         }
         if (user.isBlocked) {
-            const error = new Error('Your account is blocked');
+            const error = new Error('Your account is blocked.');
             error.statusCode = 403;
             throw error;
         }
@@ -274,6 +365,100 @@ class AuthService {
         const newRefreshToken = jwtUtil.generateRefreshToken(user);
 
         return { accessToken, refreshToken: newRefreshToken };
+    }
+
+    // Step 1 of forgot password. Same answer whether or not the email has an account (no account lookup through
+    // this form); only active, non-admin accounts actually get a code. Google-only accounts use it to create a password.
+    async forgotPassword(email) {
+        const normalizedEmail = email.trim().toLowerCase();
+        if (await redisUtil.get(resetCooldownKey(normalizedEmail))) {
+            const error = new Error(`Please wait ${RESET_COOLDOWN} seconds before requesting another code.`);
+            error.statusCode = 429;
+            throw error;
+        }
+        await redisUtil.setEx(resetCooldownKey(normalizedEmail), RESET_COOLDOWN, 1);
+
+        const user = await userRepository.findByEmail(normalizedEmail);
+        if (user && !user.isAdmin && !user.isBlocked) {
+            const otp = otpUtil.generateOtp();
+            await redisUtil.setEx(resetOtpKey(normalizedEmail), RESET_OTP_TTL, {
+                otp,
+                attempts: 0,
+                expiresAt: Date.now() + RESET_OTP_TTL * 1000
+            });
+            await emailService.sendOtpEmail(normalizedEmail, otp);
+        }
+
+        return { message: RESET_SENT_MESSAGE, expiresIn: RESET_OTP_TTL };
+    }
+
+    // Step 2: a correct code is swapped for a one-time reset token (10 min). Wrong codes count against the same
+    // 5-minute window; the 3rd wrong one ends it.
+    async verifyResetOtp(email, otp) {
+        const normalizedEmail = email.trim().toLowerCase();
+        const key = resetOtpKey(normalizedEmail);
+        const pending = await redisUtil.get(key);
+        if (!pending) {
+            const error = new Error('The code has expired. Please request a new one.');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        if (pending.otp !== otp) {
+            const attempts = pending.attempts + 1;
+            const secondsLeft = Math.ceil((pending.expiresAt - Date.now()) / 1000);
+            if (attempts >= MAX_RESET_ATTEMPTS || secondsLeft <= 0) {
+                await redisUtil.delete(key);
+                const error = new Error('Too many incorrect attempts. Please request a new code.');
+                error.statusCode = 400;
+                throw error;
+            }
+            await redisUtil.setEx(key, secondsLeft, { ...pending, attempts });
+            const left = MAX_RESET_ATTEMPTS - attempts;
+            const error = new Error(`Invalid code. You have ${left} ${left === 1 ? 'attempt' : 'attempts'} left.`);
+            error.statusCode = 400;
+            throw error;
+        }
+
+        await redisUtil.delete(key);
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        await redisUtil.setEx(resetTokenKey(resetToken), RESET_TOKEN_TTL, { email: normalizedEmail });
+        return { resetToken, expiresIn: RESET_TOKEN_TTL };
+    }
+
+    // Step 3: sets the new password (or the first one, for Google-only accounts) and burns the token
+    async resetPassword(resetToken, password) {
+        const key = resetTokenKey(resetToken);
+        const session = await redisUtil.get(key);
+        const user = session ? await userRepository.findByEmail(session.email) : null;
+        if (!user || user.isBlocked || user.isAdmin) {
+            const error = new Error('Your reset session has expired. Please start again.');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const hashedPassword = await passwordUtil.hash(password);
+        await userRepository.updateById(user._id, { password: hashedPassword });
+        await redisUtil.delete(key);
+
+        return { email: user.email };
+    }
+
+    // authMiddleware, on every protected request: deleted or blocked accounts lose access straight away,
+    // not when their access token expires
+    async verifyActiveUser(userId) {
+        const user = await userRepository.findStatusById(userId);
+        if (!user) {
+            const error = new Error('User no longer exists.');
+            error.statusCode = 401;
+            throw error;
+        }
+
+        if (user.isBlocked) {
+            const error = new Error('Your account is blocked.');
+            error.statusCode = 403;
+            throw error;
+        }
     }
 
     async logout(refreshToken) {

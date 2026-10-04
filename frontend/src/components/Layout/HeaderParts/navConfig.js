@@ -27,7 +27,7 @@ export const NAV_LINKS = [
 const WALLET_BALANCE_LABEL = "₹0";
 
 export const ACCOUNT_LINKS = [
-  { label: "My Profile", icon: User, to: FRONTEND_ROUTES.PROFILE },
+  { label: "My Profile", icon: User, to: FRONTEND_ROUTES.PROFILE_EDIT },
   { label: "My Orders", icon: Package, to: FRONTEND_ROUTES.ORDERS },
   { label: "Wishlist", icon: Heart, to: FRONTEND_ROUTES.WISHLIST },
   { label: "Rewards", icon: Gift, to: FRONTEND_ROUTES.REWARDS },

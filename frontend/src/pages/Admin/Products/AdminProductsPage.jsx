@@ -4,7 +4,6 @@ import { Package, Search, Plus, Edit, Eye, Loader2 } from 'lucide-react';
 import { useGetAllProducts } from '../../../hooks/Admin/AdminHooks';
 import Pagination from '../../../components/common/Pagination';
 import ProductModal from '../../../components/Modal/ProductModal';
-import toast from 'react-hot-toast';
 
 const AdminProductsPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -49,10 +48,6 @@ const AdminProductsPage = () => {
         if (!variants || variants.length === 0) return 0;
         return variants.reduce((sum, v) => sum + (v.stock || 0), 0);
     };
-
-    if (isError) {
-        toast.error("Failed to fetch products");
-    }
 
     return (
         <div className="p-6 max-w-7xl mx-auto">
@@ -112,6 +107,12 @@ const AdminProductsPage = () => {
                                         <div className="flex justify-center">
                                             <Loader2 className="animate-spin text-indigo-600" size={32} />
                                         </div>
+                                    </td>
+                                </tr>
+                            ) : isError ? (
+                                <tr>
+                                    <td colSpan="6" className="py-8 text-center text-rose-500 font-bold">
+                                        Failed to load products.
                                     </td>
                                 </tr>
                             ) : products.length > 0 ? (

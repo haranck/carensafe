@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useGetAllUsers, useBlockUser, useUnblockUser } from "../../../hooks/Admin/AdminHooks";
 import { Search, Lock, Unlock, User as UserIcon } from "lucide-react";
 import Pagination from "../../../components/common/Pagination";
+import ConfirmDialog from "../../../components/common/ConfirmDialog";
+import { getErrorMessage } from "../../../utils/errorMessage";
+
+const displayName = (user) => [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
 
 const AdminUsersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,12 +30,28 @@ const AdminUsersPage = () => {
   const users = response?.data || [];
   const paginationInfo = response?.pagination || { total: 0, totalPages: 1 };
 
-  const handleBlock = (userId) => {
-    blockMutation.mutate(userId);
-  };
+  // Block / Unblock waiting for confirmation. `user` is kept after closing so the dialog's text doesn't change
+  // while it animates out.
+  const [confirm, setConfirm] = useState({ open: false, user: null });
+  const confirmUser = confirm.user;
+  const isBlocking = Boolean(confirmUser && !confirmUser.isBlocked);
+  const isConfirming = blockMutation.isPending || unblockMutation.isPending;
 
-  const handleUnblock = (userId) => {
-    unblockMutation.mutate(userId);
+  const askToConfirm = (user) => setConfirm({ open: true, user });
+  const closeConfirm = () => setConfirm((current) => ({ ...current, open: false }));
+
+  const handleConfirm = () => {
+    const user = confirmUser;
+    const mutation = user.isBlocked ? unblockMutation : blockMutation;
+    mutation.mutate(user._id, {
+      onSuccess: () => {
+        toast.success(`${displayName(user)} has been ${user.isBlocked ? "unblocked" : "blocked"}`);
+      },
+      onError: (error) => {
+        toast.error(getErrorMessage(error, "Couldn't update this user. Please try again."));
+      },
+      onSettled: closeConfirm,
+    });
   };
 
   return (
@@ -57,7 +78,6 @@ const AdminUsersPage = () => {
             <thead className="bg-slate-50/80 text-slate-500 font-bold border-b border-slate-100 uppercase tracking-wider text-[12px]">
               <tr>
                 <th className="px-6 py-4">User</th>
-                <th className="px-6 py-4">Role</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Joined</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -66,7 +86,7 @@ const AdminUsersPage = () => {
             <tbody className="divide-y divide-slate-50">
               {isLoading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                     <div className="flex justify-center">
                       <div className="animate-spin w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full"></div>
                     </div>
@@ -74,13 +94,13 @@ const AdminUsersPage = () => {
                 </tr>
               ) : isError ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-rose-500 font-bold">
+                  <td colSpan="4" className="px-6 py-8 text-center text-rose-500 font-bold">
                     Failed to load users.
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                     No users found matching "{debouncedSearch}".
                   </td>
                 </tr>
@@ -105,11 +125,6 @@ const AdminUsersPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 tracking-wider">
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
                       {user.isBlocked ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100">
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
@@ -128,7 +143,7 @@ const AdminUsersPage = () => {
                     <td className="px-6 py-4 text-right">
                       {user.isBlocked ? (
                         <button
-                          onClick={() => handleUnblock(user._id)}
+                          onClick={() => askToConfirm(user)}
                           disabled={unblockMutation.isPending}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-[12px] font-bold transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
                         >
@@ -136,7 +151,7 @@ const AdminUsersPage = () => {
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleBlock(user._id)}
+                          onClick={() => askToConfirm(user)}
                           disabled={blockMutation.isPending}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-[12px] font-bold transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
                         >
@@ -161,6 +176,22 @@ const AdminUsersPage = () => {
           itemsPerPage={itemsPerPage}
         />
       )}
+
+      <ConfirmDialog
+        open={confirm.open}
+        tone={isBlocking ? "danger" : "primary"}
+        icon={isBlocking ? Lock : Unlock}
+        title={confirmUser ? `${isBlocking ? "Block" : "Unblock"} ${displayName(confirmUser)}?` : ""}
+        description={
+          isBlocking
+            ? "They won't be able to log in until you unblock them. Any session they have open ends within 15 minutes."
+            : "They'll be able to log in and shop again."
+        }
+        confirmLabel={isBlocking ? "Block user" : "Unblock user"}
+        isPending={isConfirming}
+        onConfirm={handleConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   );
 };

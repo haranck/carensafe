@@ -72,4 +72,8 @@ const productSchema = new mongoose.Schema(
     }
 );
 
+// Storefront listing: active products by newest / by name
+productSchema.index({ isActive: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, name: 1 });
+
 module.exports = mongoose.model("Product", productSchema);

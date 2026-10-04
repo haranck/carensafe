@@ -3,9 +3,13 @@ import { Search, X, Heart, ShoppingBag, Menu } from "lucide-react";
 import UserMenu from "./UserMenu";
 import HeaderSearchBar from "./HeaderSearchBar";
 import { FRONTEND_ROUTES } from "../../../constants/frontendRoutes";
+import { useWishlistIds } from "../../../hooks/Wishlist/WishlistHooks";
+import { useCartCount } from "../../../hooks/Cart/CartHooks";
 import { BRAND_GRADIENT, FOCUS_RING } from "./navConfig";
 
 const ICON_BUTTON = `relative items-center justify-center w-10 h-10 rounded-full text-slate-600 hover:text-[#d6008a] hover:bg-pink-50 transition-colors duration-200 ${FOCUS_RING}`;
+
+const itemCount = (count) => `${count} ${count === 1 ? "item" : "items"}`;
 
 const CountBadge = ({ count }) =>
   count > 0 ? (
@@ -25,9 +29,9 @@ const HeaderActions = ({
   onOpenDrawer,
   onLogout,
 }) => {
-  // TODO: replace with useGetCart() / useGetWishlist() counts once the cart & wishlist APIs exist
-  const cartCount = 0;
-  const wishlistCount = 0;
+  const { data: cartCount = 0 } = useCartCount();
+  const { data: wishlistIds } = useWishlistIds();
+  const wishlistCount = wishlistIds?.size || 0;
 
   return (
     <div className="flex items-center gap-1">
@@ -50,7 +54,7 @@ const HeaderActions = ({
 
       <Link
         to={FRONTEND_ROUTES.WISHLIST}
-        aria-label={wishlistCount ? `Wishlist, ${wishlistCount} items` : "Wishlist"}
+        aria-label={wishlistCount ? `Wishlist, ${itemCount(wishlistCount)}` : "Wishlist"}
         title="Wishlist"
         className={`hidden lg:inline-flex ${ICON_BUTTON}`}
       >
@@ -60,7 +64,7 @@ const HeaderActions = ({
 
       <Link
         to={FRONTEND_ROUTES.CART}
-        aria-label={cartCount ? `Cart, ${cartCount} items` : "Cart"}
+        aria-label={cartCount ? `Cart, ${itemCount(cartCount)}` : "Cart"}
         title="Cart"
         className={`inline-flex ${ICON_BUTTON}`}
       >
