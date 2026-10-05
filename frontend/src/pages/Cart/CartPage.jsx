@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useState } from "react";
+import { useId, useLayoutEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 import toast from "react-hot-toast";
@@ -26,6 +26,7 @@ import {
 import { useWishlistIds } from "../../hooks/Wishlist/WishlistHooks";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 import { CONTAINER, FOCUS_RING, PAGE_BACKGROUND } from "../../constants/customerTheme";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const UNDO_DURATION = 5000;
 
@@ -54,13 +55,7 @@ const CartPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = "My Cart | Care N Safe";
-    return () => {
-      document.title = previousTitle;
-    };
-  }, []);
+  usePageTitle("My Cart");
 
   const handleQuantityChange = (itemId, quantity) => updateItem({ itemId, quantity });
 
@@ -200,8 +195,8 @@ const CartPage = () => {
       </LazyMotion>
 
       <Footer />
-      {/* Keeps the end of the footer reachable above the mobile checkout bar */}
-      {hasItems && <div aria-hidden="true" className="h-20 bg-[#2c265a] lg:hidden" />}
+      {/* Keeps the page end reachable above the mobile checkout bar (footer-coloured where the footer shows, tablets) */}
+      {hasItems && <div aria-hidden="true" className="h-20 md:bg-[#2c265a] lg:hidden" />}
 
       <ConfirmDialog
         open={isClearOpen}

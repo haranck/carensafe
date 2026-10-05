@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, CalendarDays, Heart, Mail, MapPin, Package, Phone, Plus, ShoppingBag, Store, Wallet } from "lucide-react";
+import { ArrowRight, CalendarDays, ChevronRight, Heart, Mail, MapPin, Package, Phone, Plus, ShoppingBag, Store, Wallet } from "lucide-react";
 import UserAvatar from "../../components/common/UserAvatar";
 import Panel from "../../components/Profile/Panel";
 import PanelSkeleton from "../../components/Profile/PanelSkeleton";
@@ -7,6 +7,7 @@ import AddressCard from "../../components/Profile/AddressCard";
 import OrderThumb from "../../components/Order/OrderThumb";
 import { OrderStatusPill } from "../../components/Order/OrderPills";
 import SectionError from "../../components/Home/SectionError";
+import { INFO_LINKS } from "../../components/Layout/HeaderParts/navConfig";
 import { useGetProfile } from "../../hooks/Profile/ProfileHooks";
 import { useGetMyOrders } from "../../hooks/Order/OrderHooks";
 import { useGetAddresses } from "../../hooks/Address/AddressHooks";
@@ -18,6 +19,7 @@ import { BRAND_GRADIENT, FOCUS_RING } from "../../constants/customerTheme";
 import { formatPrice } from "../../utils/product";
 import { formatDate, formatMonthYear } from "../../utils/date";
 import { formatPaise } from "../../utils/wallet";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const PANEL_LINK = `inline-flex min-h-10 items-center gap-1 rounded-full px-2 text-[13px] font-bold text-[#d6008a] hover:text-[#9d0063] ${FOCUS_RING}`;
 
@@ -108,6 +110,7 @@ const LatestOrder = ({ order }) => {
 };
 
 const ProfileDashboardPage = () => {
+  usePageTitle("My Account");
   const { data: profileData, isLoading, isError, isFetching, refetch } = useGetProfile();
   // Newest order only; the total count comes from the pagination
   const { data: ordersData, isLoading: isLoadingOrders } = useGetMyOrders({ limit: 1 });
@@ -204,6 +207,24 @@ const ProfileDashboardPage = () => {
           ))}
         </ul>
       </Panel>
+
+      {/* Phones: the footer is hidden, so its info / help links live here (and in the menu drawer) */}
+      <nav aria-label="Info" className="md:hidden">
+        <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 bg-white">
+          {INFO_LINKS.map(({ label, icon: Icon, to }) => (
+            <li key={label}>
+              <Link
+                to={to}
+                className={`flex min-h-12 items-center gap-3 px-4 text-[14px] font-semibold text-slate-600 hover:bg-[#fff5fa] hover:text-[#d6008a] transition-colors ${FOCUS_RING}`}
+              >
+                <Icon size={17} aria-hidden="true" className="text-[#7c3aed]" />
+                <span className="flex-1">{label}</span>
+                <ChevronRight size={16} aria-hidden="true" className="text-slate-300" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   );
 };

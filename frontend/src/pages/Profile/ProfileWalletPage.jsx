@@ -15,6 +15,7 @@ import { orderDetailPath } from "../../constants/frontendRoutes";
 import { BRAND_GRADIENT, FOCUS_RING } from "../../constants/customerTheme";
 import { formatPaise } from "../../utils/wallet";
 import { formatDateTime } from "../../utils/order";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const PAGE_SIZE = 10;
 const FILTERS = [
@@ -109,6 +110,7 @@ const TransactionRow = ({ transaction }) => {
 };
 
 const ProfileWalletPage = () => {
+  usePageTitle("My Wallet");
   const [type, setType] = useState("");
   const [isTopupOpen, setIsTopupOpen] = useState(false);
   const { data: walletData } = useWallet();

@@ -15,7 +15,12 @@ class UserRepository {
 
     // Only what the user / admin auth middleware need on every request
     findStatusById(userId) {
-        return User.findById(userId).select('isBlocked isAdmin').lean();
+        return User.findById(userId).select('isBlocked isAdmin tokensValidAfter').lean();
+    }
+
+    // Ends every session issued before `date` (see tokensValidAfter in the model)
+    revokeTokensBefore(userId, date) {
+        return User.updateOne({ _id: userId }, { tokensValidAfter: date });
     }
 
     findByGoogleId(googleId) {
@@ -47,6 +52,11 @@ class UserRepository {
 
     deleteById(userId) {
         return User.findByIdAndDelete(userId);
+    }
+
+    // `filter` is built by the service
+    count(filter = {}) {
+        return User.countDocuments(filter);
     }
 
     existsByEmail(email) {

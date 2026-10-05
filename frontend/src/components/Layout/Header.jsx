@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useSelector } from "react-redux";
 import { AnimatePresence, LazyMotion, domAnimation } from "framer-motion";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
@@ -11,12 +12,35 @@ import HeaderActions from "./HeaderParts/HeaderActions";
 import SearchPanel from "./HeaderParts/SearchPanel";
 import MobileDrawer from "./HeaderParts/MobileDrawer";
 import MobileBottomNav from "./MobileBottomNav";
-import { FOCUS_RING } from "./HeaderParts/navConfig";
+import { FOCUS_RING, isAuthPage } from "./HeaderParts/navConfig";
 import { usePrefetchShop } from "../../hooks/Shop/ShopHooks";
 import { runWhenIdle } from "../../utils/idle";
 
 const SEARCH_ID = "header-search";
 const DRAWER_ID = "header-mobile-drawer";
+
+// Login / signup on phones: just a way back and the logo, so the form gets the whole screen
+const AuthMobileBar = () => {
+  const navigate = useNavigate();
+  // Back within the app when there is history (React Router counts it in history.state.idx), else the landing page
+  const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate(FRONTEND_ROUTES.LANDING));
+
+  return (
+    <div className="grid h-14 grid-cols-[44px_1fr_44px] items-center px-3 md:hidden">
+      <button
+        type="button"
+        onClick={goBack}
+        aria-label="Go back"
+        className={`inline-flex h-11 w-11 items-center justify-center rounded-full text-[#1e1a3a] hover:bg-pink-50 hover:text-[#d6008a] transition-colors ${FOCUS_RING}`}
+      >
+        <ArrowLeft size={22} aria-hidden="true" />
+      </button>
+      <Link to={FRONTEND_ROUTES.LANDING} aria-label="Care N Safe home" className={`justify-self-center rounded-lg ${FOCUS_RING}`}>
+        <img src="/logo.webp" alt="Care N Safe" width={62} height={40} className="h-9 w-[56px] object-contain" />
+      </Link>
+    </div>
+  );
+};
 
 export const Header = () => {
   const { pathname } = useLocation();
@@ -62,12 +86,17 @@ export const Header = () => {
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const handleLogout = () => setIsLogoutOpen(true);
 
+  // Login / signup: phones get AuthMobileBar instead of the announcement bar and the capsule
+  const onAuthPage = isAuthPage(pathname);
+  const desktopOnly = onAuthPage ? "hidden md:block" : "";
+
   return (
     <LazyMotion features={domAnimation} strict>
-      <AnnouncementBar />
+      {onAuthPage && <AuthMobileBar />}
+      <AnnouncementBar className={desktopOnly} />
 
       {/* Floating capsule: 1px gradient border wrapper around a frosted white body */}
-      <header className="sticky top-3 z-[100] mt-3">
+      <header className={`sticky top-3 z-[100] mt-3 ${desktopOnly}`}>
         <div className={CONTAINER}>
           <div className="relative">
             <div

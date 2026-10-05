@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useState } from "react";
+import { useId, useLayoutEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 import toast from "react-hot-toast";
@@ -21,6 +21,7 @@ import { formatDate } from "../../utils/date";
 import { UNPAID_CLOSED_STATUSES, daysLeft, formatDateTime, isPast, paymentMethodSummary } from "../../utils/order";
 import { formatPaise } from "../../utils/wallet";
 import { PendingPaymentBanner, UnpaidClosedBanner } from "../../components/Order/PaymentBanners";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const CARD = "rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_4px_18px_-12px_rgba(59,42,138,0.18)] sm:p-6";
 const ORDER_ACTION = `inline-flex h-11 items-center justify-center gap-2 rounded-full border bg-white px-5 text-[14px] font-bold transition-colors ${FOCUS_RING}`;
@@ -143,13 +144,7 @@ const OrderDetailPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = order ? `Order ${order.orderNumber} | Care N Safe` : "Order | Care N Safe";
-    return () => {
-      document.title = previousTitle;
-    };
-  }, [order]);
+  usePageTitle(order ? `Order ${order.orderNumber}` : "Order");
 
   let content;
   if (isLoading) {

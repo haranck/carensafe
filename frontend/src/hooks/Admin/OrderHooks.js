@@ -10,13 +10,15 @@ import {
     updateAdminOrderStatus,
 } from "../../services/Admin/orderService";
 
-// Any admin change refreshes the lists, stats, return requests and the customer's own order views
+// Any admin change refreshes the lists, stats, return requests, dashboard / sales report and the customer's own order views
 // (refunds to a customer's wallet included, if that customer is logged in on this browser)
 const ORDER_PREFIXES = [
     ["admin_orders"],
     ["admin_order"],
     ["admin_order_stats"],
     ["admin_return_items"],
+    ["admin_dashboard"],
+    ["admin_sales_report"],
     ["orders"],
     ["order"],
     ["wallet"],

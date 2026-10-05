@@ -14,12 +14,10 @@ const sendTestEmail = async () => {
 };
 
 const sendOtpEmail = async (email, otp) => {
-    // Log OTP to console for easy testing/debugging
-    console.log(`[Console] Generated OTP for ${email} is: ${otp}`);
-
     try {
+        // Local development without SMTP: the code is only printed here (never logged when real email is set up)
         if (!process.env.SMTP_USER) {
-            console.log(`[Mock Email] SMTP_USER not set, skipping real email send.`);
+            console.log(`[Mock Email] SMTP_USER not set, skipping real email send. OTP for ${email}: ${otp}`);
             return;
         }
 

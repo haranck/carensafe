@@ -13,9 +13,37 @@ const RESET_TOKEN_TTL = 600; // seconds to choose the new password after the cod
 const MAX_RESET_ATTEMPTS = 3;
 const RESET_SENT_MESSAGE = "If an account exists for this email, we've sent a verification code.";
 
+const SIGNUP_OTP_TTL = 300; // seconds
+const SIGNUP_RESEND_COOLDOWN = 30; // seconds between codes (the OTP modal waits the same)
+const MAX_SIGNUP_ATTEMPTS = 3;
+// Two refreshes with the same token this close together are two tabs racing, not a stolen token
+const REFRESH_REUSE_GRACE_MS = 10 * 1000;
+
+const signupKey = (email) => `signup:${email}`;
+const signupCooldownKey = (email) => `signup_resend_cooldown:${email}`;
+const blacklistKey = (token) => `blacklist:${token}`;
 const resetOtpKey = (email) => `password_reset:${email}`;
 const resetCooldownKey = (email) => `password_reset_cooldown:${email}`;
 const resetTokenKey = (token) => `password_reset_token:${token}`;
+
+const httpError = (message, statusCode) => {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
+};
+
+// Now, to the second (JWT iat has whole seconds): tokens issued from this second on stay valid
+const nowToTheSecond = () => new Date(Math.floor(Date.now() / 1000) * 1000);
+
+// A token issued before the account's tokensValidAfter (password reset, stolen token detected) is no longer accepted
+const issuedBeforeRevocation = (user, issuedAt) =>
+    Boolean(user.tokensValidAfter && issuedAt * 1000 < new Date(user.tokensValidAfter).getTime());
+
+// Keeps a revoked token in Redis until it would have expired anyway
+const blacklistUntilExpiry = async (token, exp, value) => {
+    const secondsLeft = exp - Math.floor(Date.now() / 1000);
+    if (secondsLeft > 0) await redisUtil.setEx(blacklistKey(token), secondsLeft, value);
+};
 
 class AuthService {
     async signup({ firstName, lastName, email, password, phone }) {
@@ -45,13 +73,13 @@ class AuthService {
             otp
         };
 
-        const redisKey = `signup:${normalizedEmail}`;
-        const attemptsKey = `otp_attempts:${normalizedEmail}`;
-        const expirationTime = 300; // 5 minutes (change to 30 for production)
-
-        await redisUtil.setEx(redisKey, expirationTime, signupData);
-        // Reset attempts
-        await redisUtil.setEx(attemptsKey, expirationTime, 0);
+        // Wrong codes are counted in the same record, so they share its 5-minute window
+        await redisUtil.setEx(signupKey(normalizedEmail), SIGNUP_OTP_TTL, {
+            ...signupData,
+            attempts: 0,
+            expiresAt: Date.now() + SIGNUP_OTP_TTL * 1000
+        });
+        await redisUtil.setEx(signupCooldownKey(normalizedEmail), SIGNUP_RESEND_COOLDOWN, 1);
 
         // 5. Send OTP via Email Service
         await emailService.sendOtpEmail(normalizedEmail, otp);
@@ -62,31 +90,25 @@ class AuthService {
         };
     }
 
+    // A new code (and a fresh 5-minute window with 3 tries), at most one every 30 seconds
     async resendOtp(email) {
-        if (!email) {
-            const error = new Error('Email is required.');
-            error.statusCode = 400;
-            throw error;
-        }
-
         const normalizedEmail = email.trim().toLowerCase();
-        const redisKey = `signup:${normalizedEmail}`;
-        const attemptsKey = `otp_attempts:${normalizedEmail}`;
-
-        const signupData = await redisUtil.get(redisKey);
+        const signupData = await redisUtil.get(signupKey(normalizedEmail));
         if (!signupData) {
-            const error = new Error('Signup session expired. Please sign up again.');
-            error.statusCode = 400;
-            throw error;
+            throw httpError('Signup session expired. Please sign up again.', 400);
+        }
+        if (await redisUtil.get(signupCooldownKey(normalizedEmail))) {
+            throw httpError(`Please wait ${SIGNUP_RESEND_COOLDOWN} seconds before requesting another code.`, 429);
         }
 
         const otp = otpUtil.generateOtp();
-        signupData.otp = otp;
-        
-        const expirationTime = 300; 
-
-        await redisUtil.setEx(redisKey, expirationTime, signupData);
-        await redisUtil.setEx(attemptsKey, expirationTime, 0);
+        await redisUtil.setEx(signupKey(normalizedEmail), SIGNUP_OTP_TTL, {
+            ...signupData,
+            otp,
+            attempts: 0,
+            expiresAt: Date.now() + SIGNUP_OTP_TTL * 1000
+        });
+        await redisUtil.setEx(signupCooldownKey(normalizedEmail), SIGNUP_RESEND_COOLDOWN, 1);
 
         await emailService.sendOtpEmail(normalizedEmail, otp);
 
@@ -97,15 +119,8 @@ class AuthService {
     }
 
     async verifyOtp({ email, otp }) {
-        if (!email || !otp) {
-            const error = new Error('Email and OTP are required.');
-            error.statusCode = 400;
-            throw error;
-        }
-
         const normalizedEmail = email.trim().toLowerCase();
-        const redisKey = `signup:${normalizedEmail}`;
-        const attemptsKey = `otp_attempts:${normalizedEmail}`;
+        const redisKey = signupKey(normalizedEmail);
 
         // 1. Get temporary data from Redis
         const signupData = await redisUtil.get(redisKey);
@@ -115,36 +130,29 @@ class AuthService {
             throw error;
         }
 
-        // 2. Brute Force Protection Check
-        let attempts = await redisUtil.get(attemptsKey) || 0;
-        if (attempts >= 3) {
-            await redisUtil.delete(redisKey);
-            await redisUtil.delete(attemptsKey);
-            const error = new Error('Too many incorrect attempts. Session invalidated, please sign up again.');
-            error.statusCode = 403;
-            throw error;
-        }
-
-        // 3. Compare OTP
+        // 2. Wrong code: counted against the same 5-minute window (never extended); the 3rd wrong one ends the signup
         if (signupData.otp !== otp) {
-            attempts += 1;
-            await redisUtil.setEx(attemptsKey, 30, attempts); // Keep same 30s TTL
-            const error = new Error(`Invalid OTP. You have ${3 - attempts} attempts left.`);
-            error.statusCode = 400;
-            throw error;
+            const attempts = (signupData.attempts || 0) + 1;
+            const secondsLeft = Math.ceil(((signupData.expiresAt || 0) - Date.now()) / 1000);
+            if (attempts >= MAX_SIGNUP_ATTEMPTS || secondsLeft <= 0) {
+                await redisUtil.delete(redisKey);
+                throw httpError('Too many incorrect attempts. Session invalidated, please sign up again.', 403);
+            }
+            await redisUtil.setEx(redisKey, secondsLeft, { ...signupData, attempts });
+            const left = MAX_SIGNUP_ATTEMPTS - attempts;
+            throw httpError(`Invalid OTP. You have ${left} ${left === 1 ? 'attempt' : 'attempts'} left.`, 400);
         }
 
-        // 4. OTP is correct, double check DB
+        // 3. OTP is correct, double check DB
         const existingUser = await userRepository.findByEmail(normalizedEmail);
         if (existingUser) {
             await redisUtil.delete(redisKey);
-            await redisUtil.delete(attemptsKey);
             const error = new Error('User with this email already exists.');
             error.statusCode = 409;
             throw error;
         }
 
-        // 5. Create user in MongoDB
+        // 4. Create user in MongoDB
         const newUser = await userRepository.create({
             firstName: signupData.firstName,
             lastName: signupData.lastName,
@@ -154,9 +162,9 @@ class AuthService {
             isAdmin: false
         });
 
-        // 6. Delete Redis temporary data
+        // 5. Delete Redis temporary data
         await redisUtil.delete(redisKey);
-        await redisUtil.delete(attemptsKey);
+        await redisUtil.delete(signupCooldownKey(normalizedEmail));
 
         const userResponse = newUser.toObject();
         delete userResponse.password;
@@ -174,6 +182,21 @@ class AuthService {
             throw error;
         }
 
+        // Google-only accounts have no password (bcrypt.compare would throw)
+        if (!user.password) {
+            const error = new Error('This account uses Google sign-in. Continue with Google, or use Forgot Password to create a password.');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // The password is checked first: without it, admin / blocked accounts look like any wrong login
+        const isPasswordValid = await passwordUtil.compare(password, user.password);
+        if (!isPasswordValid) {
+            const error = new Error('Invalid email or password');
+            error.statusCode = 401;
+            throw error;
+        }
+
         if (user.isAdmin) {
             const error = new Error('Admins are not allowed to log in from the user portal.');
             error.statusCode = 403;
@@ -183,20 +206,6 @@ class AuthService {
         if (user.isBlocked) {
             const error = new Error('Your account is blocked.');
             error.statusCode = 403;
-            throw error;
-        }
-
-        // Google-only accounts have no password (bcrypt.compare would throw)
-        if (!user.password) {
-            const error = new Error('This account uses Google sign-in. Continue with Google, or use Forgot Password to create a password.');
-            error.statusCode = 400;
-            throw error;
-        }
-
-        const isPasswordValid = await passwordUtil.compare(password, user.password);
-        if (!isPasswordValid) {
-            const error = new Error('Invalid email or password');
-            error.statusCode = 401;
             throw error;
         }
 
@@ -326,14 +335,6 @@ class AuthService {
             throw error;
         }
 
-        // 1. Check if token is blacklisted (Token Reuse Detection)
-        const isBlacklisted = await redisUtil.get(`blacklist:${refreshToken}`);
-        if (isBlacklisted) {
-            const error = new Error('Token has been revoked. Malicious activity detected. Please log in again.');
-            error.statusCode = 403;
-            throw error;
-        }
-
         let decoded;
         try {
             decoded = jwtUtil.verifyRefreshToken(refreshToken);
@@ -341,6 +342,17 @@ class AuthService {
             const error = new Error('Invalid or expired refresh token');
             error.statusCode = 401;
             throw error;
+        }
+
+        // 1. Token reuse detection. A token rotated seconds ago is two tabs refreshing together (allowed); anything
+        // else (logged out, or rotated earlier) means a copy of it is being replayed: every session of the account ends.
+        const revoked = await redisUtil.get(blacklistKey(refreshToken));
+        if (revoked) {
+            const racing = Boolean(revoked.rotatedAt) && Date.now() - revoked.rotatedAt < REFRESH_REUSE_GRACE_MS;
+            if (!racing) {
+                await userRepository.revokeTokensBefore(decoded.userId, nowToTheSecond());
+                throw httpError('Token has been revoked. Malicious activity detected. Please log in again.', 403);
+            }
         }
 
         const user = await userRepository.findById(decoded.userId);
@@ -360,12 +372,13 @@ class AuthService {
             error.statusCode = 403;
             throw error;
         }
-
-        const currentTime = Math.floor(Date.now() / 1000);
-        const expiresInSeconds = decoded.exp - currentTime;
-        if (expiresInSeconds > 0) {
-            await redisUtil.setEx(`blacklist:${refreshToken}`, expiresInSeconds, 'revoked');
+        // Sessions ended by a password reset / stolen token detection
+        if (issuedBeforeRevocation(user, decoded.iat)) {
+            throw httpError('Your session has ended. Please log in again.', 401);
         }
+
+        // Rotation: the old token is spent (racing tabs keep the first rotation time)
+        if (!revoked) await blacklistUntilExpiry(refreshToken, decoded.exp, { rotatedAt: Date.now() });
 
         const accessToken = jwtUtil.generateAccessToken(user);
         const newRefreshToken = jwtUtil.generateRefreshToken(user);
@@ -444,15 +457,16 @@ class AuthService {
         }
 
         const hashedPassword = await passwordUtil.hash(password);
-        await userRepository.updateById(user._id, { password: hashedPassword });
+        // Every device logged in before the reset is logged out (a stolen session doesn't survive it)
+        await userRepository.updateById(user._id, { password: hashedPassword, tokensValidAfter: nowToTheSecond() });
         await redisUtil.delete(key);
 
         return { email: user.email };
     }
 
-    // authMiddleware, on every protected request: deleted or blocked accounts lose access straight away,
-    // not when their access token expires
-    async verifyActiveUser(userId) {
+    // authMiddleware, on every protected request: deleted or blocked accounts and ended sessions lose access straight
+    // away, not when their access token expires. issuedAt: the access token's iat.
+    async verifyActiveUser(userId, issuedAt) {
         const user = await userRepository.findStatusById(userId);
         if (!user) {
             const error = new Error('User no longer exists.');
@@ -472,18 +486,35 @@ class AuthService {
             error.statusCode = 403;
             throw error;
         }
+
+        if (issuedBeforeRevocation(user, issuedAt)) {
+            throw httpError('Your session has ended. Please log in again.', 401);
+        }
     }
 
-    async logout(refreshToken) {
-        try {
-            const decoded = jwtUtil.verifyRefreshToken(refreshToken);
-            const currentTime = Math.floor(Date.now() / 1000);
-            const expiresInSeconds = decoded.exp - currentTime;
-            if (expiresInSeconds > 0) {
-                await redisUtil.setEx(`blacklist:${refreshToken}`, expiresInSeconds, 'revoked');
+    // Access tokens of logged-out sessions (authMiddleware)
+    async isAccessTokenRevoked(accessToken) {
+        return Boolean(await redisUtil.get(blacklistKey(accessToken)));
+    }
+
+    // Revokes both tokens of this session: the refresh token, and the access token so it stops working now instead of
+    // when it expires. Either may be missing, expired or invalid (nothing to revoke then).
+    async logout(refreshToken, accessToken) {
+        if (refreshToken) {
+            try {
+                const decoded = jwtUtil.verifyRefreshToken(refreshToken);
+                await blacklistUntilExpiry(refreshToken, decoded.exp, 'revoked');
+            } catch (error) {
+                // Already expired or invalid
             }
-        } catch (error) {
-            // Ignore if token is already expired or invalid
+        }
+        if (accessToken) {
+            try {
+                const decoded = jwtUtil.verifyAccessToken(accessToken);
+                await blacklistUntilExpiry(accessToken, decoded.exp, 'revoked');
+            } catch (error) {
+                // Already expired or invalid
+            }
         }
     }
 }

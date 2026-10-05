@@ -9,6 +9,7 @@ import { useGetAdminReturnItems } from "../../../hooks/Admin/OrderHooks";
 import { adminOrderDetailPath } from "../../../constants/frontendRoutes";
 import { formatPrice } from "../../../utils/product";
 import { formatDate } from "../../../utils/date";
+import { usePageTitle } from "../../../hooks/common/usePageTitle";
 
 const PAGE_SIZE = 10;
 
@@ -17,6 +18,7 @@ const customerName = (row) =>
 
 // Every item with an open return (requested, or approved and waiting for the pack), newest request first
 const AdminReturnsPage = () => {
+  usePageTitle("Admin · Returns");
   const [page, setPage] = useState(1);
   const { data: response, isLoading, isError, isFetching, refetch } = useGetAdminReturnItems(page, PAGE_SIZE);
   const rows = response?.data || [];

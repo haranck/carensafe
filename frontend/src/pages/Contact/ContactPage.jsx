@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect } from "react";
+import { useId, useLayoutEffect } from "react";
 import { Link } from "react-router-dom";
 import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 import { Clock, Mail, MapPin, Package, Phone } from "lucide-react";
@@ -8,6 +8,7 @@ import ContactForm from "../../components/Contact/ContactForm";
 import { COMPANY } from "../../constants/company";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 import { CONTAINER, FOCUS_RING, PAGE_BACKGROUND } from "../../constants/customerTheme";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const CARD = "rounded-2xl border border-slate-100 bg-white shadow-[0_10px_30px_-20px_rgba(59,42,138,0.35)]";
 
@@ -26,13 +27,7 @@ const ContactPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = "Contact Us | Care N Safe";
-    return () => {
-      document.title = previousTitle;
-    };
-  }, []);
+  usePageTitle("Contact Us");
 
   return (
     <div className={`min-h-screen flex flex-col font-sans ${PAGE_BACKGROUND}`}>

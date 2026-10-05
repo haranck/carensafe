@@ -4,8 +4,10 @@ import { Package, Search, Plus, Edit, Eye, Loader2 } from 'lucide-react';
 import { useGetAllProducts } from '../../../hooks/Admin/AdminHooks';
 import Pagination from '../../../components/common/Pagination';
 import ProductModal from '../../../components/Modal/ProductModal';
+import { usePageTitle } from "../../../hooks/common/usePageTitle";
 
 const AdminProductsPage = () => {
+    usePageTitle("Admin · Products");
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);

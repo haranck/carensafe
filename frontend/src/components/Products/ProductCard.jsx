@@ -24,6 +24,8 @@ const ACTION_BUTTON = `relative z-10 inline-flex h-10 w-full items-center justif
 const OUTLINE_BUTTON = "border-2 border-[#d6008a] bg-white text-[#d6008a] hover:border-[#9d0063] hover:bg-[#fff5fa] hover:text-[#9d0063]";
 const GRADIENT_BUTTON = `${BRAND_GRADIENT} text-white shadow-[0_4px_14px_rgba(124,58,237,0.25)] hover:brightness-110`;
 const HEART_POSITION = "absolute top-2 right-2 z-10";
+// Wishlist cards: one row on phones (compact Move to Cart + icon-only Remove), stacked full-width buttons from sm
+const WISHLIST_BUTTON = `relative z-10 inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[11.5px] font-bold transition-all duration-200 active:scale-[0.97] sm:h-10 sm:w-full sm:flex-none sm:text-[12px] ${FOCUS_RING}`;
 
 // Card buttons sit inside the card's link overlay: stop them from also opening the detail page
 const stopCardClick = (e) => {
@@ -133,20 +135,21 @@ const CompactAddButton = ({ name, inStock, onAdd }) => (
 
 // Wishlist page: Move to Cart (or why it can't be bought) + Remove
 const WishlistActions = ({ name, isAvailable, inStock, onMove, onRemove }) => (
-  <div className="flex flex-col gap-1">
+  <div className="flex items-center gap-1.5 sm:flex-col sm:items-stretch sm:gap-1">
     {!isAvailable && (
-      <p className="flex h-10 items-center justify-center rounded-full bg-slate-100 text-[12px] font-bold text-slate-500">
-        No longer available
+      <p className="flex h-9 min-w-0 flex-1 items-center justify-center truncate rounded-full bg-slate-100 px-2 text-[11px] font-bold text-slate-500 sm:h-10 sm:flex-none sm:text-[12px]">
+        <span className="sm:hidden">Unavailable</span>
+        <span className="hidden sm:inline">No longer available</span>
       </p>
     )}
     {isAvailable && inStock && (
-      <button type="button" onClick={onMove} aria-label={`Move ${name} to cart`} className={`${ACTION_BUTTON} ${GRADIENT_BUTTON}`}>
-        <ShoppingBag size={15} aria-hidden="true" />
+      <button type="button" onClick={onMove} aria-label={`Move ${name} to cart`} className={`${WISHLIST_BUTTON} ${GRADIENT_BUTTON}`}>
+        <ShoppingBag size={15} aria-hidden="true" className="hidden sm:block" />
         Move to Cart
       </button>
     )}
     {isAvailable && !inStock && (
-      <button type="button" disabled className={`${ACTION_BUTTON} cursor-not-allowed bg-slate-100 text-slate-500`}>
+      <button type="button" disabled className={`${WISHLIST_BUTTON} cursor-not-allowed bg-slate-100 text-slate-500`}>
         Out of stock
       </button>
     )}
@@ -154,10 +157,11 @@ const WishlistActions = ({ name, isAvailable, inStock, onMove, onRemove }) => (
       type="button"
       onClick={onRemove}
       aria-label={`Remove ${name} from wishlist`}
-      className={`relative z-10 inline-flex h-10 items-center justify-center gap-1.5 rounded-full text-[12.5px] font-semibold text-slate-500 hover:bg-[#fff5fa] hover:text-[#d6008a] transition-colors ${FOCUS_RING}`}
+      title="Remove"
+      className={`relative z-10 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center gap-1.5 rounded-full border border-slate-200 text-[12.5px] font-semibold text-slate-500 hover:bg-[#fff5fa] hover:text-[#d6008a] transition-colors sm:h-10 sm:w-auto sm:border-0 ${FOCUS_RING}`}
     >
       <Trash2 size={14} aria-hidden="true" />
-      Remove
+      <span className="hidden sm:inline">Remove</span>
     </button>
   </div>
 );
@@ -238,9 +242,9 @@ const ProductCard = ({ item, layout = "grid", mode = "shop", onRemove }) => {
   };
 
   const heart = isWishlistMode ? (
-    <WishlistHeartButton isWishlisted onClick={() => onRemove(item)} name={name} className={HEART_POSITION} />
+    <WishlistHeartButton isWishlisted onClick={() => onRemove(item)} name={name} compact className={HEART_POSITION} />
   ) : (
-    <WishlistButton productId={item._id} variantId={variant._id} name={name} className={HEART_POSITION} />
+    <WishlistButton productId={item._id} variantId={variant._id} name={name} compact className={HEART_POSITION} />
   );
 
   if (layout === "compact") {
@@ -325,17 +329,27 @@ const ProductCard = ({ item, layout = "grid", mode = "shop", onRemove }) => {
           alt={name}
           sizes={
             isWishlistMode
-              ? "(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
+              ? "(min-width: 1024px) 400px, 50vw"
               : "(min-width: 1280px) 280px, (min-width: 640px) 30vw, 50vw"
           }
-          className={`aspect-square w-full rounded-xl ${isAvailable ? "" : "opacity-50 grayscale"}`}
+          className={`w-full rounded-xl ${isWishlistMode ? "aspect-[5/4] sm:aspect-square" : "aspect-square"} ${isAvailable ? "" : "opacity-50 grayscale"}`}
         />
         <Badge label={badge} />
         {heart}
       </div>
-      <div className="flex flex-1 flex-col gap-1.5 px-1 pb-0.5 pt-3">
-        {isWishlistMode ? <SavedVariant variant={variant} /> : isAvailable && <SizeChips sizes={item.sizes} />}
-        <h3 className="line-clamp-2 min-h-[2.75em] text-[13px] font-semibold leading-snug text-[#1e1a3a] @min-[12rem]:text-[14px]">
+      <div className={`flex flex-1 flex-col gap-1.5 px-1 pb-0.5 ${isWishlistMode ? "pt-2 sm:pt-3" : "pt-3"}`}>
+        {isWishlistMode ? (
+          <div className="hidden sm:block">
+            <SavedVariant variant={variant} />
+          </div>
+        ) : (
+          isAvailable && <SizeChips sizes={item.sizes} />
+        )}
+        <h3
+          className={`text-[13px] font-semibold leading-snug text-[#1e1a3a] @min-[12rem]:text-[14px] ${
+            isWishlistMode ? "line-clamp-1 sm:line-clamp-2 sm:min-h-[2.75em]" : "line-clamp-2 min-h-[2.75em]"
+          }`}
+        >
           {isAvailable ? (
             <CardLink to={detailPath} onIntent={handleIntent} overlayRadius="after:rounded-2xl">
               {name}
@@ -344,9 +358,20 @@ const ProductCard = ({ item, layout = "grid", mode = "shop", onRemove }) => {
             <span className="text-slate-400">{name}</span>
           )}
         </h3>
+        {/* Wishlist on phones: the saved size and the price share one line */}
+        {isWishlistMode && (
+          <div className="flex min-w-0 items-center justify-between gap-2 sm:hidden">
+            <span className="truncate text-[11.5px] font-bold text-[#3b2a8a]">{variant.size ? `Size ${variant.size}` : ""}</span>
+            {isAvailable && <span className="flex-shrink-0 text-[15px] font-extrabold text-[#1e1a3a]">{formatPrice(item.minPrice)}</span>}
+          </div>
+        )}
         {isAvailable && <StockNote stock={variant.stock} />}
-        <div className="mt-auto flex flex-col gap-2.5 pt-1">
-          {isAvailable && <Price item={item} className="text-[16px] @min-[12rem]:text-[18px]" />}
+        <div className={`mt-auto flex flex-col pt-1 ${isWishlistMode ? "gap-2 sm:gap-2.5" : "gap-2.5"}`}>
+          {isAvailable && (
+            <div className={isWishlistMode ? "hidden sm:block" : undefined}>
+              <Price item={item} className="text-[16px] @min-[12rem]:text-[18px]" />
+            </div>
+          )}
           {isWishlistMode ? (
             <WishlistActions
               name={name}

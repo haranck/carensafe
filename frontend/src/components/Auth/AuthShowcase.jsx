@@ -123,13 +123,13 @@ const AuthShowcase = ({ variant = "login" }) => {
   );
 };
 
-/** Phones / tablets: the same story in a short strip above the form. */
+/** Tablets / small laptops (md to xl): the same story in a short strip above the form. Phones show only the form. */
 export const AuthShowcaseCompact = ({ variant = "login", className = "max-w-[460px]" }) => {
   const { title, text } = CONTENT[variant];
 
   return (
     <div
-      className={`relative flex w-full ${className} items-end gap-2 overflow-hidden rounded-3xl border border-white bg-gradient-to-br from-[#ffe4f2] via-[#f8eeff] to-[#e9e0ff] pl-5 pt-5 shadow-[0_16px_40px_-24px_rgba(59,42,138,0.45)] xl:hidden`}
+      className={`relative hidden w-full md:flex ${className} items-end gap-2 overflow-hidden rounded-3xl border border-white bg-gradient-to-br from-[#ffe4f2] via-[#f8eeff] to-[#e9e0ff] pl-5 pt-5 shadow-[0_16px_40px_-24px_rgba(59,42,138,0.45)] xl:hidden`}
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(240px_180px_at_100%_100%,rgba(214,0,138,0.16),transparent_70%)]" />
       <div className="relative min-w-0 flex-1 pb-5">

@@ -56,7 +56,7 @@ class UserController {
 
     async requestEmailChange(req, res) {
         try {
-            const result = await userService.requestEmailChange(req.user.userId, req.body.newEmail);
+            const result = await userService.requestEmailChange(req.user.userId, req.body.newEmail, req.body.password);
             return res.status(200).json({
                 success: true,
                 message: 'Verification code sent to your new email',

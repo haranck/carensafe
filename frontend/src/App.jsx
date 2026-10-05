@@ -3,6 +3,7 @@ import AdminRoutes from './routes/admin/AdminRoutes'
 import { Toaster } from 'react-hot-toast'
 import { Routes, Route } from "react-router-dom";
 import AppToast from './components/common/AppToast';
+import PwaUpdatePrompt from './components/common/PwaUpdatePrompt';
 import './App.css';
 
 const App = () => {
@@ -20,6 +21,8 @@ const App = () => {
       >
         {(t) => <AppToast t={t} />}
       </Toaster>
+      {/* Installed app: service worker registration + "New version available" banner */}
+      <PwaUpdatePrompt />
       <Routes>
         <Route path="/*" element={<UserRoutes />} />
         <Route path="/admin/*" element={<AdminRoutes />} />

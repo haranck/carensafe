@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect } from "react";
+import { useId, useLayoutEffect } from "react";
 import { LazyMotion, MotionConfig, domAnimation } from "framer-motion";
 import Header from "../../components/Layout/Header";
 import Footer from "../../components/Layout/Footer";
@@ -8,6 +8,7 @@ import TechnologySection from "../../components/About/TechnologySection";
 import EverydaySection from "../../components/About/EverydaySection";
 import CtaBanner from "../../components/Home/CtaBanner";
 import { PAGE_BACKGROUND } from "../../constants/customerTheme";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 // About Us: brand story, numbers, the 11-in-1 technology, our promise, shop CTA
 const AboutPage = () => {
@@ -17,13 +18,7 @@ const AboutPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = "About Us | Care N Safe";
-    return () => {
-      document.title = previousTitle;
-    };
-  }, []);
+  usePageTitle("About Us");
 
   return (
     <div className={`min-h-screen flex flex-col font-sans ${PAGE_BACKGROUND}`}>

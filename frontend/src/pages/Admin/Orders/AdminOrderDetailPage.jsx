@@ -17,6 +17,7 @@ import { formatPrice } from "../../../utils/product";
 import { formatDate } from "../../../utils/date";
 import { PAYMENT_METHOD_LABELS, formatDateTime } from "../../../utils/order";
 import { getErrorMessage } from "../../../utils/errorMessage";
+import { usePageTitle } from "../../../hooks/common/usePageTitle";
 
 const ADMIN_BY_LABELS = { user: "Customer", admin: "Admin", system: "System" };
 
@@ -32,6 +33,7 @@ const AdminOrderDetailPage = () => {
   const { data, isLoading, isError, isFetching, refetch } = useGetAdminOrder(id);
   const markReceived = useMarkReturnReceived();
   const order = data?.data;
+  usePageTitle(order ? `Admin · Order ${order.orderNumber}` : "Admin · Order");
   const [isCancelOpen, setIsCancelOpen] = useState(false);
   // { open, item, decision }; item kept while closing so the modal text doesn't jump
   const [decision, setDecision] = useState({ open: false, item: null, decision: "approved" });

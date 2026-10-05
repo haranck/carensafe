@@ -9,6 +9,7 @@ import { useGetAdminOrderStats, useGetAdminOrders } from "../../../hooks/Admin/O
 import { adminOrderDetailPath } from "../../../constants/frontendRoutes";
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, formatDateTime } from "../../../utils/order";
 import { formatPrice } from "../../../utils/product";
+import { usePageTitle } from "../../../hooks/common/usePageTitle";
 
 const PAGE_SIZE = 10;
 const EMPTY_FILTERS = { orderStatus: "", paymentStatus: "", from: "", to: "", hasReturnRequest: false };
@@ -17,6 +18,7 @@ const customerName = (order) =>
   [order.user?.firstName, order.user?.lastName].filter(Boolean).join(" ") || order.shippingAddress?.fullName || "Customer";
 
 const AdminOrdersPage = () => {
+  usePageTitle("Admin · Orders");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState(EMPTY_FILTERS);

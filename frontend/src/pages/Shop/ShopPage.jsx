@@ -19,6 +19,7 @@ import { useShopParams } from "../../hooks/Shop/ShopHooks";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 import { CONTAINER, FOCUS_RING, PAGE_BACKGROUND } from "../../constants/customerTheme";
 import { CATEGORY_LABELS } from "../../utils/product";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const SKELETON_COUNT = 8;
 // 2 per row on phones, 3 on tablets / small laptops (next to the sidebar from lg), 4 from xl
@@ -90,13 +91,7 @@ const ShopPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = "Shop All Products | Care N Safe";
-    return () => {
-      document.title = previousTitle;
-    };
-  }, []);
+  usePageTitle("Shop");
 
   // Next page in the background so paging feels instant
   useEffect(() => {

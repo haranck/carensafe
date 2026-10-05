@@ -12,15 +12,17 @@ import ShopPagination from "../../components/Shop/ShopPagination";
 import { useAddToWishlist, useGetWishlist, useRemoveFromWishlist } from "../../hooks/Wishlist/WishlistHooks";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 import { CONTAINER, FOCUS_RING, PAGE_BACKGROUND, PINK_BUTTON } from "../../constants/customerTheme";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const PAGE_SIZE = 12;
 const SKELETON_COUNT = 6;
 const UNDO_DURATION = 5000;
-// 1 per row on phones, 2 on tablets, 3 from laptops (the page is capped at 1240px so cards stay a sensible size)
-const GRID = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5";
+// 2 compact cards per row on phones and tablets, 3 from laptops (the page is capped at 1240px so cards stay a sensible size)
+const GRID = "grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 lg:gap-5";
 
+// Hidden on phones (the bottom tab bar already says where you are)
 const WishlistBreadcrumb = () => (
-  <nav aria-label="Breadcrumb">
+  <nav aria-label="Breadcrumb" className="hidden sm:block">
     <ol className="flex items-center gap-1.5 text-[12.5px] font-medium text-slate-500">
       <li className="flex items-center gap-1.5">
         <Link
@@ -103,13 +105,7 @@ const WishlistPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = "My Wishlist | Care N Safe";
-    return () => {
-      document.title = previousTitle;
-    };
-  }, []);
+  usePageTitle("My Wishlist");
 
   // Past the last page (a stale link, or the last item on this page was removed) → last page
   useEffect(() => {
@@ -191,7 +187,7 @@ const WishlistPage = () => {
       <LazyMotion features={domAnimation} strict>
         <MotionConfig reducedMotion="user">
           <main className="flex-1 overflow-x-clip">
-            <section aria-labelledby={headingId} className={`${CONTAINER} pt-6 pb-16`}>
+            <section aria-labelledby={headingId} className={`${CONTAINER} pt-4 pb-16 sm:pt-6`}>
               <div className="mx-auto max-w-[1240px]">
                 <WishlistBreadcrumb />
 
@@ -200,26 +196,26 @@ const WishlistPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
                 >
-                  <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+                  <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 sm:mt-2">
                     <div>
-                      <span className="inline-flex items-center rounded-full border border-pink-100 bg-white px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.18em] text-[#d6008a]">
+                      <span className="hidden items-center rounded-full border border-pink-100 bg-white px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.18em] text-[#d6008a] sm:inline-flex">
                         Saved for Later
                       </span>
                       <h1
                         id={headingId}
-                        className="mt-3 text-[30px] font-extrabold leading-tight tracking-tight text-[#1e1a3a] sm:text-[40px]"
+                        className="text-[24px] font-extrabold leading-tight tracking-tight text-[#1e1a3a] sm:mt-3 sm:text-[40px]"
                       >
                         My <span className="font-accent font-medium italic text-[#d6008a]">Wishlist</span>
                       </h1>
                     </div>
                     {total > 0 && (
-                      <p className="text-[14px] font-semibold text-slate-500" aria-live="polite">
+                      <p className="text-[13px] font-semibold text-slate-500 sm:text-[14px]" aria-live="polite">
                         <span className="text-[#1e1a3a]">{total}</span> {total === 1 ? "item" : "items"}
                       </p>
                     )}
                   </div>
 
-                  <div ref={gridTopRef} className="mt-8 scroll-mt-28">
+                  <div ref={gridTopRef} className="mt-4 scroll-mt-28 sm:mt-8">
                     {content}
                   </div>
                 </m.div>

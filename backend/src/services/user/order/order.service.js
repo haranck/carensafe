@@ -260,7 +260,7 @@ class OrderService {
                 throw error;
             }
         }
-        throw httpError("Couldn't place your order. Please try again.", 500);
+        throw httpError("Couldn't place your order. Please try again.", 503);
     }
 
     /**

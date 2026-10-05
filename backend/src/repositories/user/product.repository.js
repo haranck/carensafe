@@ -166,6 +166,27 @@ class ProductRepository {
             { session }
         );
     }
+
+    // Active variants of active products at or below `threshold` units, lowest stock first (admin dashboard)
+    findLowStockVariants(threshold, limit = 6) {
+        return Product.aggregate([
+            { $match: { isActive: true } },
+            { $unwind: '$variants' },
+            { $match: { 'variants.isActive': true, 'variants.stock': { $lte: threshold } } },
+            { $sort: { 'variants.stock': 1, name: 1 } },
+            { $limit: limit },
+            {
+                $project: {
+                    name: 1,
+                    variantId: '$variants._id',
+                    variantName: '$variants.name',
+                    size: '$variants.size',
+                    stock: '$variants.stock',
+                    image: { $first: '$variants.images.url' }
+                }
+            }
+        ]);
+    }
 }
 
 module.exports = new ProductRepository();

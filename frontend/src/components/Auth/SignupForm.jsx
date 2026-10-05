@@ -103,10 +103,11 @@ const SignupForm = () => {
     };
 
     const inputClass =
-        "min-w-0 flex-1 bg-transparent border-none outline-none py-2.5 px-3 text-[13px] text-slate-800 placeholder:text-slate-300 placeholder:text-xs";
+        "min-w-0 flex-1 bg-transparent border-none outline-none py-3 px-3 text-base text-slate-800 placeholder:text-slate-300 placeholder:text-[13px] md:py-2.5 md:text-[13px] md:placeholder:text-xs"; // 16px, 48px tall on phones (no iOS zoom)
 
+    // Phones: no card (border / shadow), just the form with side padding; the card from md
     return (
-        <div className="bg-white rounded-2xl shadow-[0_12px_40px_rgba(59,42,138,0.10),0_2px_8px_rgba(0,0,0,0.05)] p-6 sm:p-8 w-full max-w-[420px]">
+        <div className="w-full max-w-[420px] px-5 py-2 md:rounded-2xl md:bg-white md:p-8 md:shadow-[0_12px_40px_rgba(59,42,138,0.10),0_2px_8px_rgba(0,0,0,0.05)]">
 
 
 

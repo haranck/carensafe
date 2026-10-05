@@ -23,6 +23,7 @@ import { checkoutTotals, newCheckoutKey, paymentSplit } from "../../utils/checko
 import { formatPaise } from "../../utils/wallet";
 import { formatPrice } from "../../utils/product";
 import { getErrorMessage } from "../../utils/errorMessage";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 // Nothing to order (empty cart, or only unavailable lines): back to the cart with a toast (in an effect, not render)
 const EmptyCartRedirect = () => {
@@ -52,13 +53,7 @@ const CheckoutPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = "Checkout | Care N Safe";
-    return () => {
-      document.title = previousTitle;
-    };
-  }, []);
+  usePageTitle("Checkout");
 
   const items = (cartQuery.data?.data?.items || []).filter((item) => item.isAvailable);
   const totals = checkoutTotals(cartQuery.data?.data?.summary);
@@ -231,8 +226,8 @@ const CheckoutPage = () => {
       <VerifyingOverlay show={isVerifying} />
 
       <Footer />
-      {/* Keeps the end of the footer reachable above the mobile bar */}
-      {showBar && <div aria-hidden="true" className="h-24 bg-[#2c265a] lg:hidden" />}
+      {/* Keeps the page end reachable above the mobile bar (footer-coloured where the footer shows, tablets) */}
+      {showBar && <div aria-hidden="true" className="h-24 md:bg-[#2c265a] lg:hidden" />}
     </div>
   );
 };

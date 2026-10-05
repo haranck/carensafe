@@ -9,11 +9,13 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 import SectionError from "../../components/Home/SectionError";
 import { useDeleteAddress, useGetAddresses, useSetDefaultAddress } from "../../hooks/Address/AddressHooks";
 import { BRAND_GRADIENT, FOCUS_RING, PINK_BUTTON } from "../../constants/customerTheme";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 // Same limit as the API (config/addresses.js)
 const MAX_ADDRESSES = 10;
 
 const ProfileAddressesPage = () => {
+  usePageTitle("My Addresses");
   const { data, isLoading, isError, isFetching, refetch } = useGetAddresses();
   const { mutate: deleteAddress, isPending: isDeleting } = useDeleteAddress();
   const { mutate: setDefault } = useSetDefaultAddress();

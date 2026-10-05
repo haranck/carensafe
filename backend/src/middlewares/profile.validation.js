@@ -18,11 +18,18 @@ const updateProfileSchema = Joi.object({
     .min(1)
     .messages({ 'object.min': 'Nothing to update.' });
 
+// The current password proves it's the account owner (a stolen session alone can't move the account to another email)
 const emailChangeSchema = Joi.object({
     newEmail: Joi.string().trim().email().max(254).required().messages({
         'string.email': 'Please provide a valid email.',
         'string.empty': 'Email is required.',
         'any.required': 'Email is required.'
+    }),
+    password: Joi.string().max(128).required().messages({
+        'string.base': 'Enter your current password.',
+        'string.empty': 'Enter your current password.',
+        'string.max': 'Incorrect password.',
+        'any.required': 'Enter your current password.'
     })
 });
 

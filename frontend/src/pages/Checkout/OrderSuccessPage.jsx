@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect } from "react";
+import { useId, useLayoutEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 import { Check, Loader2, MapPin, Package, Wallet } from "lucide-react";
@@ -12,6 +12,7 @@ import { formatPrice } from "../../utils/product";
 import { formatAddress } from "../../utils/address";
 import { paymentMethodSummary } from "../../utils/order";
 import { formatPaise } from "../../utils/wallet";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const SummaryRow = ({ label, valueClassName = "text-[#1e1a3a]", children }) => (
   <div className="flex justify-between gap-4">
@@ -31,13 +32,7 @@ const OrderSuccessPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = "Order placed | Care N Safe";
-    return () => {
-      document.title = previousTitle;
-    };
-  }, []);
+  usePageTitle("Order Placed");
 
   let content;
   if (isLoading) {

@@ -128,11 +128,20 @@ throw error;
 `middlewares/error.middleware.js` (`globalErrorHandler`) is only a safety net: it handles `multer.MulterError`
 (400 `Upload Error: ...`, raised by `upload.*` before the controller runs) and anything uncaught (Express 5
 forwards rejected promises). Same JSON shape. Keep the controller try/catch pattern for new code.
+In production `middlewares/security.middleware.js` replaces every **500** message with a generic one (the real one is
+logged), so errors meant for the user must use 4xx or 502/503. It also sets basic security headers; `app.js` sets
+`trust proxy` 1 and allows only `FRONTEND_URL` for CORS in production.
 
 ### Auth
 
 - `utils/jwt.js` signs `{ userId }` (there are no roles; admins are `isAdmin: true`). Access token 15m, refresh 7d. Refresh rotation and logout
-  blacklist the old token in Redis (`blacklist:<token>`).
+  blacklist the old token in Redis (`blacklist:<token>`); logout also blacklists the access token (checked in `authMiddleware`).
+  Replaying a rotated refresh token (outside a 10s two-tab grace) or resetting the password sets the user's
+  `tokensValidAfter`: every customer token issued before it is rejected (all devices logged out).
+- Auth endpoints are rate-limited (`middlewares/rateLimit.middleware.js`): `authRateLimiter` (login, Google, admin login:
+  10 failures / 15 min / IP), `otpSendRateLimiter` / `otpVerifyRateLimiter` (per IP + email), `passwordCheckRateLimiter`
+  (email change, which also needs the current password). Behind a proxy in production set `app.set('trust proxy', 1)`.
+- Login checks the password before saying an account is admin / blocked.
 - `middlewares/auth.middleware.js` (default export) expects `Authorization: Bearer <token>`, verifies it and sets
   **`req.user = { userId }`**. 401 `{ success:false, message }` otherwise. On every request it also calls
   `authService.verifyActiveUser`: deleted user → 401 "User no longer exists.", blocked → 403 "Your account is blocked."
@@ -146,8 +155,9 @@ forwards rejected promises). Same JSON shape. Keep the controller try/catch patt
   request (401 / 403 "Admin access required."). Frontend: `adminSession` Redux slice, `routes/AdminRoute.jsx` guard,
   `api/axios.js` sends the admin token for `/admin/...` URLs and refreshes via the admin endpoint (one shared refresh per
   session). Refresh tokens carry a random `jti` so two issued in the same second differ.
-- Signup is a two-step OTP flow. Pending signup data lives in Redis `signup:<email>` (300s) with
-  `otp_attempts:<email>` (max 3). The user is created only in `verifyOtp`.
+- Signup is a two-step OTP flow. Pending signup data lives in Redis `signup:<email>` (300s; wrong attempts are counted
+  inside it, max 3, without extending the window) and resends wait 30s (`signup_resend_cooldown:<email>`). The user is
+  created only in `verifyOtp`.
 
 ### Validation (Joi)
 
@@ -326,12 +336,12 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 ## Known issues (as of 2026-10-03)
 
 **Security**
-- Global rate limiter is commented out in `app.js`; login/OTP endpoints are unthrottled (order/payment endpoints have
-  `paymentRateLimiter`).
-- OTP brute-force guard is weak: a wrong attempt resets `otp_attempts:<email>` TTL to 30s while the signup key lives 300s.
+- Global rate limiter is commented out in `app.js` (auth, contact, order/payment endpoints have their own limiters).
+- Customer access tokens are persisted in localStorage (redux-persist `token`), readable by any XSS.
+- `npm audit`: `cloudinary` <2.7.0 (high, argument injection via `&` in parameters). Not reachable here (upload params
+  are fixed server-side, deleted ids come from the DB); the fix is a breaking v2 upgrade that conflicts with
+  `multer-storage-cloudinary`.
 - `frontend/.env` is tracked in git (`frontend/.gitignore` doesn't ignore `.env`).
-- Logout (`hooks/Auth/useLogout.js`) blacklists only the refresh token: the access token stays valid for up to 15 min.
-- `services/user/auth/email.service.js` logs every OTP to the server console (`[Console] Generated OTP`).
 - Product images upload to `carensafe/products` (avatars use their own `avatarUpload` → `carensafe/avatars`).
 
 **Bugs**
@@ -373,7 +383,7 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - `repositories/admin/` is empty; admin services use `repositories/user/*`. `repositories/user/auth/auth.repository.js`
   duplicates `user.repository.js` and is no longer used anywhere. `AuthService.adminLogin` is dead code
   duplicating `AdminAuthService.adminLogin`.
-- Joi covers only signup/login. Verify-OTP, resend-OTP and all admin endpoints validate ad hoc (some in controllers).
+- Some admin endpoints still validate ad hoc (some in controllers).
 - `utils/email.js` reads `process.env` directly. There's no `.env.example` in either app.
 - Backend has both `redis` and `ioredis` installed (only `ioredis` is used), plus `typescript`/`@types/node`
   devDeps with no TS in the project. There's no backend lint or tests anywhere.

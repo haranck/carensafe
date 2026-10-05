@@ -10,9 +10,9 @@ const authMiddleware = async (req, res, next) => {
         });
     }
 
+    const token = authHeader.split(' ')[1];
     let decoded;
     try {
-        const token = authHeader.split(' ')[1];
         decoded = jwtUtil.verifyAccessToken(token);
     } catch (error) {
         return res.status(401).json({
@@ -22,8 +22,15 @@ const authMiddleware = async (req, res, next) => {
     }
 
     try {
-        // The account must still exist and not be blocked (401 / 403)
-        await authService.verifyActiveUser(decoded.userId);
+        // Logged out: this access token was revoked with its session
+        if (await authService.isAccessTokenRevoked(token)) {
+            return res.status(401).json({
+                success: false,
+                message: 'Your session has ended. Please log in again.'
+            });
+        }
+        // The account must still exist, not be blocked, and this session must not have been ended (401 / 403)
+        await authService.verifyActiveUser(decoded.userId, decoded.iat);
     } catch (error) {
         const statusCode = error.statusCode || 500;
         return res.status(statusCode).json({

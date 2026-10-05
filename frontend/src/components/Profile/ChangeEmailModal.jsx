@@ -12,8 +12,10 @@ import { getErrorMessage } from "../../utils/errorMessage";
 // Same as the API: a new code can be requested every 30 seconds
 const RESEND_SECONDS = 30;
 
+// Same rules as the API (profile.validation.js emailChangeSchema)
 const emailSchema = z.object({
   newEmail: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
+  password: z.string().min(1, "Enter your current password.").max(128, "Incorrect password."),
 });
 
 const otpSchema = z.object({
@@ -40,15 +42,17 @@ const ApiError = ({ error, fallback }) =>
     </p>
   ) : null;
 
-// Step 1: new email → code sent to it. Step 2: 6-digit code (resend after 30 s) → email updated.
+// Step 1: new email + current password → code sent to it. Step 2: 6-digit code (resend after 30 s) → email updated.
 const EmailChangeFlow = ({ currentEmail, onDone }) => {
   const id = useId();
   const [pendingEmail, setPendingEmail] = useState("");
+  // Kept for "Resend code" (the API asks for it on every send)
+  const [password, setPassword] = useState("");
   const [secondsLeft, setSecondsLeft] = useState(0);
   const request = useRequestEmailChange();
   const verify = useVerifyEmailChange();
 
-  const emailForm = useForm({ resolver: zodResolver(emailSchema), mode: "onTouched", defaultValues: { newEmail: "" } });
+  const emailForm = useForm({ resolver: zodResolver(emailSchema), mode: "onTouched", defaultValues: { newEmail: "", password: "" } });
   const otpForm = useForm({ resolver: zodResolver(otpSchema), mode: "onTouched", defaultValues: { otp: "" } });
 
   useEffect(() => {
@@ -57,10 +61,11 @@ const EmailChangeFlow = ({ currentEmail, onDone }) => {
     return () => clearTimeout(timer);
   }, [secondsLeft]);
 
-  const sendCode = (newEmail) =>
-    request.mutate(newEmail, {
+  const sendCode = (newEmail, currentPassword) =>
+    request.mutate({ newEmail, password: currentPassword }, {
       onSuccess: (response) => {
         setPendingEmail(response.data.newEmail);
+        setPassword(currentPassword);
         setSecondsLeft(RESEND_SECONDS);
         otpForm.reset({ otp: "" });
         verify.reset();
@@ -77,7 +82,7 @@ const EmailChangeFlow = ({ currentEmail, onDone }) => {
 
   if (!pendingEmail) {
     return (
-      <form onSubmit={emailForm.handleSubmit(({ newEmail }) => sendCode(newEmail))} noValidate className="flex flex-col gap-4">
+      <form onSubmit={emailForm.handleSubmit(({ newEmail, password: currentPassword }) => sendCode(newEmail, currentPassword))} noValidate className="flex flex-col gap-4">
         <p className="text-[13px] text-slate-500">
           Current email: <span className="font-semibold text-[#1e1a3a]">{currentEmail}</span>
         </p>
@@ -95,6 +100,20 @@ const EmailChangeFlow = ({ currentEmail, onDone }) => {
             {...emailForm.register("newEmail")}
           />
           <FieldError message={emailForm.formState.errors.newEmail?.message} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor={`${id}-password`} className="text-[12px] font-bold uppercase tracking-wide text-slate-500">
+            Current password
+          </label>
+          <input
+            id={`${id}-password`}
+            type="password"
+            autoComplete="current-password"
+            placeholder="Your password"
+            className={`${INPUT} ${emailForm.formState.errors.password ? "border-rose-400" : "border-slate-200"}`}
+            {...emailForm.register("password")}
+          />
+          <FieldError message={emailForm.formState.errors.password?.message} />
         </div>
         <button type="submit" disabled={request.isPending} className={SUBMIT}>
           {request.isPending && <Loader2 size={17} aria-hidden="true" className="animate-spin" />}
@@ -130,13 +149,20 @@ const EmailChangeFlow = ({ currentEmail, onDone }) => {
         Verify & Update Email
       </button>
       <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] text-slate-500">
-        <button type="button" onClick={() => setPendingEmail("")} className={LINK_BUTTON}>
+        <button
+          type="button"
+          onClick={() => {
+            setPendingEmail("");
+            setPassword("");
+          }}
+          className={LINK_BUTTON}
+        >
           Use a different email
         </button>
         {secondsLeft > 0 ? (
           <span aria-live="polite">Resend code in 0:{String(secondsLeft).padStart(2, "0")}</span>
         ) : (
-          <button type="button" onClick={() => sendCode(pendingEmail)} disabled={request.isPending} className={LINK_BUTTON}>
+          <button type="button" onClick={() => sendCode(pendingEmail, password)} disabled={request.isPending} className={LINK_BUTTON}>
             Resend code
           </button>
         )}

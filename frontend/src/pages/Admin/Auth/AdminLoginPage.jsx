@@ -1,5 +1,6 @@
 import AdminLoginForm from "../../../components/Admin/Auth/AdminLoginForm";
 import { ShieldCheck, Lock, Activity, Users } from "lucide-react";
+import { usePageTitle } from "../../../hooks/common/usePageTitle";
 
 const ADMIN_FEATURES = [
   { icon: ShieldCheck, label: "Advanced Security Controls" },
@@ -8,6 +9,7 @@ const ADMIN_FEATURES = [
 ];
 
 const AdminLoginPage = () => {
+  usePageTitle("Admin Login");
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-6 overflow-hidden relative">
       

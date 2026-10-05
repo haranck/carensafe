@@ -526,7 +526,7 @@ class PaymentService {
             }
         }
         const saved = await this.undoUnpaidOrder(order._id, 'cancelled', note || 'Order cancelled before payment', { reason, by });
-        if (!saved) throw httpError("Couldn't cancel this order. Please try again.", 500);
+        if (!saved) throw httpError("Couldn't cancel this order. Please try again.", 503);
         return saved;
     }
 

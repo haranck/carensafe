@@ -19,8 +19,9 @@ export const uploadAvatar = async (file) => {
     return response.data;
 };
 
-export const requestEmailChange = async (newEmail) => {
-    const response = await AxiosInstance.post(API_ROUTES.PROFILE.EMAIL_REQUEST_OTP, { newEmail });
+// { newEmail, password }: the current password confirms it's the account owner
+export const requestEmailChange = async ({ newEmail, password }) => {
+    const response = await AxiosInstance.post(API_ROUTES.PROFILE.EMAIL_REQUEST_OTP, { newEmail, password });
     return response.data;
 };
 

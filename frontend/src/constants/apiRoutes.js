@@ -94,5 +94,10 @@ export const API_ROUTES = {
         CANCEL: (id) => `/admin/orders/${id}/cancel`,
         DECIDE_RETURN: (id, itemId) => `/admin/orders/${id}/items/${itemId}/return`,
         RETURN_RECEIVED: (id, itemId) => `/admin/orders/${id}/items/${itemId}/return/received`,
+    },
+    ADMIN_REPORTS: {
+        DASHBOARD: "/admin/reports/dashboard",
+        SALES: "/admin/reports/sales",
+        SALES_EXPORT: "/admin/reports/sales/export",
     }
 };

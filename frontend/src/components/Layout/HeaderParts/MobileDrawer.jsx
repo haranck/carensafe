@@ -6,6 +6,7 @@ import { FRONTEND_ROUTES } from "../../../constants/frontendRoutes";
 import {
   NAV_LINKS,
   ACCOUNT_LINKS,
+  INFO_LINKS,
   BRAND_GRADIENT,
   FOCUS_RING,
   resolveNavPath,
@@ -13,6 +14,9 @@ import {
 import UserAvatar from "../../common/UserAvatar";
 import { useWalletBalance } from "../../../hooks/Wallet/WalletHooks";
 import { formatPaise } from "../../../utils/wallet";
+
+// The footer's info / help links (phones don't show the footer), minus the ones Explore already lists (About Us)
+const DRAWER_INFO_LINKS = INFO_LINKS.filter((info) => !NAV_LINKS.some((link) => link.label === info.label));
 
 const SectionTitle = ({ children }) => (
   <p className="px-3 mb-1.5 text-[10.5px] font-bold uppercase tracking-widest text-slate-400">{children}</p>
@@ -162,6 +166,26 @@ const MobileDrawer = ({ id, isLoggedIn, user, onClose, onLogout }) => {
                 ))}
               </ul>
             </div>
+          )}
+
+          {DRAWER_INFO_LINKS.length > 0 && (
+            <nav aria-label="Info">
+              <SectionTitle>Info</SectionTitle>
+              <ul className="flex flex-col gap-0.5">
+                {DRAWER_INFO_LINKS.map(({ label, icon: Icon, to }) => (
+                  <li key={label}>
+                    <Link
+                      to={to}
+                      onClick={onClose}
+                      className={`${linkClass} font-medium text-slate-600 hover:bg-white hover:text-[#1e1a3a]`}
+                    >
+                      <Icon size={17} aria-hidden="true" className="text-[#7c3aed]" />
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           )}
         </div>
 

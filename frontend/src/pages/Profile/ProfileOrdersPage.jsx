@@ -9,6 +9,7 @@ import { useGetMyOrders } from "../../hooks/Order/OrderHooks";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 import { FOCUS_RING, PINK_BUTTON } from "../../constants/customerTheme";
 import { ORDER_FILTERS } from "../../utils/order";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const PAGE_SIZE = 5;
 const PAGER_BUTTON = `inline-flex h-10 items-center gap-1 rounded-full border border-slate-200 bg-white px-4 text-[13px] font-bold text-slate-600 hover:border-pink-200 hover:text-[#d6008a] disabled:cursor-not-allowed disabled:opacity-40 ${FOCUS_RING}`;
@@ -22,6 +23,7 @@ const EMPTY_HINTS = {
 };
 
 const ProfileOrdersPage = () => {
+  usePageTitle("My Orders");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, isFetching, isPlaceholderData, refetch } = useGetMyOrders({ page, limit: PAGE_SIZE, status });

@@ -86,18 +86,19 @@ const LoginForm = () => {
     };
 
     const inputClass =
-        "min-w-0 flex-1 bg-transparent border-none outline-none py-3.5 px-3.5 text-[14.5px] text-slate-800 placeholder:text-slate-300 placeholder:text-[13.5px]";
+        "min-w-0 flex-1 bg-transparent border-none outline-none py-3.5 px-3.5 text-base md:text-[14.5px] text-slate-800 placeholder:text-slate-300 placeholder:text-[13.5px]"; // 16px on phones: iOS doesn't zoom in on focus
 
+    // Phones: no card (border / shadow), just the form with side padding; the card from md
     return (
-        <div className="bg-white rounded-3xl shadow-[0_12px_40px_rgba(59,42,138,0.12),0_2px_8px_rgba(0,0,0,0.05)] p-6 sm:p-10 w-full max-w-[460px]">
+        <div className="w-full max-w-[460px] px-5 py-2 md:rounded-3xl md:bg-white md:p-10 md:shadow-[0_12px_40px_rgba(59,42,138,0.12),0_2px_8px_rgba(0,0,0,0.05)]">
 
-            {/* Logo */}
-            <div className="flex justify-center mb-6">
+            {/* Logo (phones have it in the top bar) */}
+            <div className="hidden md:flex justify-center mb-6">
                 <img src="/logo.webp" alt="Care N Safe" className="h-10 object-contain" />
             </div>
 
             {/* Heading */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-6 md:mb-8">
                 <h2 className="text-[26px] font-extrabold text-[#2c265a] tracking-tight mb-1.5">
                     Welcome Back
                 </h2>
