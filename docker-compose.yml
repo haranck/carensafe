@@ -1,6 +1,6 @@
 services:
   backend:
-    image: haranck/carensafe-backend:latest
+    image: carensafe/carensafe-backend:latest
     build: ./backend          # comment this out once the image is pushed to Docker Hub
     ports:
       - "3000:3000"
