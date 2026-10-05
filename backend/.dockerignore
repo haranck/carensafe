@@ -1,0 +1,21 @@
+# Installed fresh inside the image (npm ci)
+node_modules
+npm-debug.log*
+
+# Secrets never go into the image: they're passed at run time (env_file / --env-file)
+.env
+.env.*
+
+# Not needed to run the API
+.git
+.gitignore
+docs
+*.md
+test_real.png
+Dockerfile*
+.dockerignore
+docker-compose*
+coverage
+.vscode
+.idea
+.DS_Store

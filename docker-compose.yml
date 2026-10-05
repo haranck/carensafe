@@ -1,0 +1,28 @@
+services:
+  backend:
+    image: haranck/carensafe-backend:latest
+    build: ./backend          # comment this out once the image is pushed to Docker Hub
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/.env        # secrets (MONGO_URI, JWT, Razorpay, Cloudinary, SMTP, Google)
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - REDIS_URL=redis://redis:6379   # this app reads REDIS_URL (REDIS_HOST / REDIS_PORT are ignored)
+    init: true                # lets `docker stop` stop Node right away
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6380:6379"           # 6380 on your machine, so it doesn't clash with a local Redis on 6379
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

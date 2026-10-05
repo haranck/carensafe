@@ -1,0 +1,195 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useUserSignUp } from "../../hooks/Auth/AuthHooks";
+import { Link, useLocation } from "react-router-dom";
+import { User, Mail, Phone, Lock, Tag, AlertCircle } from "lucide-react";
+import OtpModal from "../Modal/OtpModal";
+import { getErrorMessage } from "../../utils/errorMessage";
+import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
+import GoogleLoginButton from "./GoogleLoginButton";
+
+// ── Zod schema ──────────────────────────────────────────────
+const signupSchema = z
+    .object({
+        fullName: z
+            .string()
+            .min(2, "Full name must be at least 2 characters")
+            .max(60, "Full name is too long")
+            .regex(/^[a-zA-Z\s]+$/, "Name can only contain letters and spaces"),
+        email: z
+            .string()
+            .min(1, "Email is required")
+            .email("Enter a valid email address"),
+        phone: z
+            .string()
+            .min(10, "Phone must be at least 10 digits")
+            .max(15, "Phone number is too long")
+            .regex(/^[0-9+\-\s()]+$/, "Enter a valid phone number"),
+        password: z
+            .string()
+            .min(8, "Password must be at least 8 characters")
+            .regex(/[A-Z]/, "Must contain at least one uppercase letter")
+            .regex(/[0-9]/, "Must contain at least one number"),
+        confirmPassword: z.string().min(1, "Please confirm your password"),
+        
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
+    });
+
+// ── Inline error ─────────────────────────────────────────────
+const FieldError = ({ message }) =>
+    message ? (
+        <p className="flex items-center gap-1 text-[10.5px] font-semibold text-rose-500 mt-1 pl-0.5">
+            <AlertCircle size={11} />
+            {message}
+        </p>
+    ) : null;
+
+// ── Reusable field ────────────────────────────────────────────
+const Field = ({ label, icon: Icon, error, children }) => (
+    <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            {label}
+        </label>
+        <div
+            className={`flex items-center rounded-xl border bg-slate-50/80 transition-all duration-200
+        focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(214,0,138,0.12)]
+        ${error
+                    ? "border-rose-400 focus-within:border-rose-400 focus-within:shadow-[0_0_0_3px_rgba(244,63,94,0.12)]"
+                    : "border-slate-200 focus-within:border-[#d6008a]"
+                }`}
+        >
+            <span className={`pl-3 flex-shrink-0 transition-colors duration-200 ${error ? "text-rose-400" : "text-slate-400 group-focus-within:text-[#d6008a]"}`}>
+                <Icon size={14} />
+            </span>
+            {children}
+        </div>
+        <FieldError message={error?.message} />
+    </div>
+);
+
+// ── Component ─────────────────────────────────────────────────
+const SignupForm = () => {
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+    } = useForm({ resolver: zodResolver(signupSchema), mode: "onTouched" });
+
+    const { mutate, isPending, isError, error, isSuccess } = useUserSignUp();
+    // Router state from the login gate ({ from }): kept on the Login link and through OTP → Login
+    const location = useLocation();
+    const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+    const [registeredEmail, setRegisteredEmail] = useState("");
+
+    const onSubmit = (data) => {
+        const [firstName, ...rest] = data.fullName.trim().split(" ");
+        mutate({
+            firstName,
+            lastName: rest.join(" ") || "",
+            email: data.email,
+            phone: data.phone,
+            password: data.password,
+        }, {
+            onSuccess: () => {
+                setRegisteredEmail(data.email);
+                setIsOtpModalOpen(true);
+            }
+        });
+    };
+
+    const inputClass =
+        "min-w-0 flex-1 bg-transparent border-none outline-none py-3 px-3 text-base text-slate-800 placeholder:text-slate-300 placeholder:text-[13px] md:py-2.5 md:text-[13px] md:placeholder:text-xs"; // 16px, 48px tall on phones (no iOS zoom)
+
+    // Phones: no card (border / shadow), just the form with side padding; the card from md
+    return (
+        <div className="w-full max-w-[420px] px-5 py-2 md:rounded-2xl md:bg-white md:p-8 md:shadow-[0_12px_40px_rgba(59,42,138,0.10),0_2px_8px_rgba(0,0,0,0.05)]">
+
+
+
+            {/* Heading */}
+            <div className="text-center mb-6">
+                <h2 className="text-[22px] font-extrabold text-[#2c265a] tracking-tight mb-1">
+                    Create Your Account
+                </h2>
+                <p className="text-[12px] text-slate-400">
+                    Join Care N Safe for a better period-care experience.
+                </p>
+            </div>
+
+            {/* API banners */}
+            {isError && (
+                <div className="mb-4 px-4 py-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-semibold text-center">
+                    {getErrorMessage(error, "Registration failed. Please try again.")}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3.5" noValidate>
+
+                <Field label="Full Name" icon={User} error={errors.fullName}>
+                    <input type="text" placeholder="Priya Sharma" className={inputClass} {...register("fullName")} />
+                </Field>
+
+                <Field label="Email Address" icon={Mail} error={errors.email}>
+                    <input type="email" placeholder="priya@email.com" className={inputClass} {...register("email")} />
+                </Field>
+
+                <Field label="Phone Number" icon={Phone} error={errors.phone}>
+                    <input type="tel" placeholder="+91 98765 43210" className={inputClass} {...register("phone")} />
+                </Field>
+
+                <Field label="Password" icon={Lock} error={errors.password}>
+                    <input type="password" placeholder="Min 8 chars, 1 uppercase, 1 number" className={inputClass} {...register("password")} />
+                </Field>
+
+                <Field label="Confirm Password" icon={Lock} error={errors.confirmPassword}>
+                    <input type="password" placeholder="Re-enter your password" className={inputClass} {...register("confirmPassword")} />
+                </Field>
+
+            
+
+                {/* Submit */}
+                <button
+                    type="submit"
+                    disabled={isPending}
+                    className="mt-1 w-full py-3 rounded-xl text-white text-[13.5px] font-bold tracking-wide
+            bg-gradient-to-r from-[#3b2a8a] via-[#7c3aed] to-[#d6008a]
+            shadow-[0_4px_16px_rgba(214,0,138,0.30)]
+            hover:opacity-90 hover:-translate-y-px hover:shadow-[0_6px_22px_rgba(214,0,138,0.40)]
+            active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed
+            transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                    {isPending ? (
+                        <span className="w-[18px] h-[18px] border-[2.5px] border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                    ) : (
+                        "Create Account →"
+                    )}
+                </button>
+
+                {/* OR divider + Google button (hidden when VITE_GOOGLE_CLIENT_ID is missing) */}
+                <GoogleLoginButton />
+
+                {/* Login link */}
+                <p className="text-center text-xs text-slate-400 pt-1">
+                    Already have an account?{" "}
+                    <Link to={FRONTEND_ROUTES.LOGIN} state={location.state} className="text-[#d6008a] font-bold hover:underline">
+                        Login
+                    </Link>
+                </p>
+            </form>
+
+            {/* OTP Modal */}
+            <OtpModal
+                isOpen={isOtpModalOpen}
+                onClose={() => setIsOtpModalOpen(false)}
+                email={registeredEmail}
+            />
+        </div>
+    );
+};
+
+export default SignupForm;
