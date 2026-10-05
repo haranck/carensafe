@@ -5,8 +5,9 @@ with variants). Two independent apps:
 
 ```
 carensafe/
-├── backend/    Express 5 API, CommonJS, MongoDB (Mongoose) + Redis (ioredis)
-└── frontend/   React 19 + Vite SPA, ES modules, Tailwind v4
+├── backend/             Express 5 API, CommonJS, MongoDB (Mongoose) + Redis (ioredis); Dockerfile
+├── frontend/            React 19 + Vite SPA, ES modules, Tailwind v4, PWA (vite-plugin-pwa)
+└── docker-compose.yml   backend + Redis containers (MongoDB stays on Atlas)
 ```
 
 ## Commands
@@ -18,6 +19,7 @@ carensafe/
 | Lint | none | `npm run lint` (ESLint flat config) |
 | Tests | none (`npm test` just fails) | none |
 | Smoke check | `node -e "require('./src/app')"` (loads all modules, no DB needed) | `npm run build` |
+| Docker | `docker compose up -d --build` from the repo root (see **Docker** below) | not containerised |
 
 - Backend startup needs MongoDB **and** Redis reachable; `server.js` exits on either failure.
 - Backend env is validated in `src/config/envValidation.js` (required: `MONGO_URI`, `JWT_ACCESS_SECRET`,
@@ -45,7 +47,8 @@ Mounted in `src/app.js`: `/api/user/auth`, `/api/user/products`, `/api/user/wish
 `/api/user/profile` (the `user/user` route/controller/service files), `/api/user/addresses`, `/api/user/orders`, `/api/user/wallet`,
 `/api/user/payments`, `/api/payments/razorpay/webhook` (raw body, mounted before `express.json`),
 `/api/user/contact` (public Contact form: saved to `contactmessages`, emailed to `CONTACT_EMAIL_TO` or `SMTP_USER`, rate-limited),
-`/api/admin/auth`, `/api/admin/users`, `/api/admin/products`, `/api/admin/orders`.
+`/api/admin/auth`, `/api/admin/users`, `/api/admin/products`, `/api/admin/orders`,
+`/api/admin/reports` (dashboard, sales report + PDF export data; sales = delivered / partially returned orders, IST dates).
 `globalErrorHandler` is registered last.
 
 > The `user/user` feature files (`user.routes.js`, `user.controller.js`, `user.service.js`) are the profile API
@@ -128,9 +131,8 @@ throw error;
 `middlewares/error.middleware.js` (`globalErrorHandler`) is only a safety net: it handles `multer.MulterError`
 (400 `Upload Error: ...`, raised by `upload.*` before the controller runs) and anything uncaught (Express 5
 forwards rejected promises). Same JSON shape. Keep the controller try/catch pattern for new code.
-In production `middlewares/security.middleware.js` replaces every **500** message with a generic one (the real one is
-logged), so errors meant for the user must use 4xx or 502/503. It also sets basic security headers; `app.js` sets
-`trust proxy` 1 and allows only `FRONTEND_URL` for CORS in production.
+Errors meant for the user that aren't the client's fault use 502/503 (e.g. "Couldn't place your order. Please try
+again." is 503), so a future "hide 500 messages in production" layer won't swallow them.
 
 ### Auth
 
@@ -191,6 +193,30 @@ jpg/jpeg/png/webp, 5 MB). `upload.single('avatar')` → `req.file.path` is the U
 8. Admin counterpart? Use `admin.cart.*` names in `routes/admin/`, `controllers/admin/cart/`, `services/admin/cart/`,
    reuse the same repository, mount at `/api/admin/cart`.
 9. Run `node -e "require('./src/app')"`, then hit the endpoint with the dev server running.
+
+---
+
+## Docker (backend only)
+
+- `backend/Dockerfile`: `node:24-alpine` (`google-auth-library` needs Node >= 22; no build step, plain JS), builder
+  stage `npm ci --omit=dev` + source, final stage copies `/app`, `NODE_ENV=production`, runs as the `node` user,
+  port 3000, `CMD ["node", "server.js"]`. No healthchecks. No Doppler: secrets come from `backend/.env` at run time.
+- `backend/.dockerignore`: `node_modules`, every `.env*`, `docs`, `*.md`, `test_real.png`, Docker files, so secrets are
+  never baked into the image.
+- `docker-compose.yml` (repo root, same layout as the projexa one): `backend` (`image: haranck/carensafe-backend:latest`
+  + `build: ./backend` — comment the build out once the image is on Docker Hub; `env_file: ./backend/.env`;
+  `NODE_ENV=production`, `PORT=3000`, `REDIS_URL=redis://redis:6379`; port `3000:3000`; `init: true` because
+  `server.js` has no SIGTERM handler) + `redis` (`redis:alpine`, published on host port **6380**, no volume: OTPs /
+  token blacklist / locks are short-lived), both on the `app-network` bridge network.
+- Redis must be `REDIS_URL`: the app ignores `REDIS_HOST` / `REDIS_PORT` (Known issues), and "localhost" inside the
+  container is the container itself. MongoDB stays on Atlas via `MONGO_URI` (a `mongodb://localhost…` URI can't work).
+- Commands (repo root): `docker compose up -d --build` · `docker compose logs -f backend` · `docker compose ps` ·
+  `docker compose down` · `docker compose exec backend sh` · push: `docker compose build && docker compose push backend`.
+- Port 3000 clashes with a local `npm start`; change the host side of `ports` (`"3001:3000"`) to run both.
+- Production: secure cookies need HTTPS (put the container behind an HTTPS reverse proxy), exact `FRONTEND_URL`
+  (CORS), public HTTPS URL for the Razorpay webhook (`https://<api-host>/api/payments/razorpay/webhook`), the site
+  origin in Google OAuth, and `trust proxy` (see Known issues). Several backend containers can share one database and
+  Redis: the payment jobs take a Redis lock, so only one runs them each minute.
 
 ---
 
@@ -263,6 +289,11 @@ Pattern from `components/Auth/LoginForm.jsx`:
   `UPDATE_VARIANT: (id, variantId) => \`/admin/products/${id}/variants/${variantId}\``. No URL literals in services.
 - `constants/frontendRoutes.js` → `FRONTEND_ROUTES.<NAME>` for page paths. Use it in `<Route>`, `navigate()`, `<Link>`.
 - `constants/errorMessages.js` → backend message strings the UI matches on (must equal the backend text exactly).
+- Page titles: every page calls `usePageTitle("Shop")` (`hooks/common/usePageTitle.js` → "CareNsafe | Shop"; admin pages
+  "CareNsafe | Admin · Orders"). New pages must call it too.
+- PWA (`vite-plugin-pwa` in `vite.config.js`, production builds only): manifest + Workbox service worker,
+  `registerType: "prompt"` with `components/common/PwaUpdatePrompt.jsx` ("New version available"). Only the app shell,
+  Cloudinary images, Google Fonts and same-origin images are cached; never API responses. Icons in `public/icons/`.
 
 ### Checklist: adding a frontend feature (e.g. Cart)
 
@@ -324,7 +355,7 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - **No new npm packages** (either app) without asking first. Everything listed in package.json is available.
 - Before any change touching more than ~2 files, or both apps, write a short plan (files + what changes) and get confirmation.
 - After changes: frontend `npm run lint` + `npm run build`; backend `node -e "require('./src/app')"`.
-  Lint has a pre-existing baseline of 14 errors / 1 warning, so don't add new ones and report the before/after.
+  Lint has a pre-existing baseline of 15 errors / 1 warning, so don't add new ones and report the before/after.
 - Backend stays CommonJS (`require`/`module.exports`), frontend stays ESM `.jsx`/`.js`. No TypeScript files.
 - Never read, edit, print or commit `.env` files or secrets; never hardcode credentials or URLs that belong in env.
   Add new env vars to `envValidation.js` and tell the user which to set.
@@ -333,25 +364,27 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 
 ---
 
-## Known issues (as of 2026-10-03)
+## Known issues (as of 2026-10-05)
 
 **Security**
+- `app.js` doesn't set `trust proxy`: behind any reverse proxy / Docker host every visitor has the proxy's IP, so one
+  person's failed logins rate-limit everyone. Add `if (env.NODE_ENV === 'production') app.set('trust proxy', 1);` before
+  deploying (2 behind Cloudflare + a host proxy).
+- CORS also allows `http://localhost:5173/5174` in production, and 500 responses send the raw internal error message
+  (e.g. Mongo errors) to the client. No security headers (`X-Powered-By` is on).
 - Global rate limiter is commented out in `app.js` (auth, contact, order/payment endpoints have their own limiters).
 - Customer access tokens are persisted in localStorage (redux-persist `token`), readable by any XSS.
 - `npm audit`: `cloudinary` <2.7.0 (high, argument injection via `&` in parameters). Not reachable here (upload params
   are fixed server-side, deleted ids come from the DB); the fix is a breaking v2 upgrade that conflicts with
   `multer-storage-cloudinary`.
-- `frontend/.env` is tracked in git (`frontend/.gitignore` doesn't ignore `.env`).
 - Product images upload to `carensafe/products` (avatars use their own `avatarUpload` → `carensafe/avatars`).
 
 **Bugs**
 - `infrastructure/cache/redisClient.js` falls back to `env.REDIS_HOST/REDIS_PORT`, which `envValidation.js` never
   exports (`parseRedisHost/parseRedisPort` are unused). It only works because ioredis defaults to localhost:6379.
-- OTP email text says "expires in 30 seconds"; actual TTL is 300s.
 - Signup zod schema is weaker than Joi (no lowercase/special-char rule), so the server rejects passwords the form accepts.
 - `ProductModal.jsx` calls hooks after an early `return null` (rules-of-hooks) and imports via `'../../../src/hooks/...'`.
 - `AdminProductsPage` calls `toast.error` during render. `keepPreviousData: true` in `AdminHooks.js` is ignored (v5).
-- `AdminDashboardPage` uses dynamic Tailwind classes (`bg-${statusColor}-50`) and hardcoded mock stats/orders.
 - Cloudinary uploads happen before controller validation; rejected requests and removed variant images are never
   deleted (orphans).
 
