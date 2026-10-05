@@ -4,7 +4,11 @@ import { Heart } from "lucide-react";
 import { useWishlistToggle } from "../../hooks/Wishlist/WishlistHooks";
 import { FOCUS_RING } from "../../constants/customerTheme";
 
-const BASE = `inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full shadow-sm transition-colors duration-200 aria-disabled:cursor-wait ${FOCUS_RING}`;
+const BASE = `inline-flex flex-shrink-0 items-center justify-center rounded-full shadow-sm transition-colors duration-200 aria-disabled:cursor-wait ${FOCUS_RING}`;
+const REGULAR = "h-10 w-10";
+// Product cards on phones: 32px with a 16px heart (40px from sm); the invisible ::before keeps a 40px tap area
+// (the cards position the button absolutely, which the ::before is placed against)
+const COMPACT = "h-8 w-8 sm:h-10 sm:w-10 before:absolute before:-inset-1 before:rounded-full before:content-['']";
 const ON = "bg-red-50 text-red-500 hover:bg-red-100";
 const OFF = "bg-white text-slate-500 hover:text-red-500";
 
@@ -13,7 +17,7 @@ const OFF = "bg-white text-slate-500 hover:text-red-500";
  * Clicks never reach a surrounding card link. `disabled` (pending) ignores clicks but keeps keyboard focus.
  * Needs a LazyMotion ancestor (every customer page has one) for the pop.
  */
-export const WishlistHeartButton = ({ isWishlisted, onClick, disabled = false, name, size = 18, className = "" }) => {
+export const WishlistHeartButton = ({ isWishlisted, onClick, disabled = false, name, size = 18, compact = false, className = "" }) => {
   // Bumped on every click: remounts the icon so the pop replays (no pop on first render)
   const [pops, setPops] = useState(0);
   const subject = name ? `${name} ` : "";
@@ -34,7 +38,7 @@ export const WishlistHeartButton = ({ isWishlisted, onClick, disabled = false, n
       aria-disabled={disabled}
       aria-label={isWishlisted ? `Remove ${subject}from wishlist` : `Add ${subject}to wishlist`}
       title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-      className={`${BASE} ${isWishlisted ? ON : OFF} ${className}`}
+      className={`${BASE} ${compact ? COMPACT : REGULAR} ${isWishlisted ? ON : OFF} ${className}`}
     >
       <m.span
         key={pops}
@@ -44,14 +48,18 @@ export const WishlistHeartButton = ({ isWishlisted, onClick, disabled = false, n
         transition={{ duration: 0.2, ease: "easeOut" }}
         className="inline-flex"
       >
-        <Heart size={size} className={isWishlisted ? "fill-red-500 text-red-500" : ""} />
+        <Heart
+          size={size}
+          className={`${compact ? "h-4 w-4 sm:h-[18px] sm:w-[18px]" : ""} ${isWishlisted ? "fill-red-500 text-red-500" : ""}`}
+        />
       </m.span>
     </button>
   );
 };
 
-// Heart wired to the wishlist API (optimistic; logged-out users are sent to login)
-const WishlistButton = ({ productId, variantId, name, size, className }) => {
+// Heart for ONE variant (size) of a product, wired to the wishlist API (optimistic; logged-out users are sent to
+// login). `variantId` is required: each size is saved separately. `compact`: the smaller phone size (product cards).
+const WishlistButton = ({ productId, variantId, name, size, compact, className }) => {
   const { isWishlisted, toggle, isPending } = useWishlistToggle(productId, variantId);
 
   return (
@@ -61,6 +69,7 @@ const WishlistButton = ({ productId, variantId, name, size, className }) => {
       disabled={isPending}
       name={name}
       size={size}
+      compact={compact}
       className={className}
     />
   );

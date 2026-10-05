@@ -9,13 +9,13 @@ export const FRONTEND_ROUTES = {
   // Storefront & account (pages not built yet; linked from the header)
   SHOP: "/shop",
   PRODUCT_DETAIL: "/product/:id", // build links with productDetailPath()
-  TECHNOLOGY: "/technology",
   CARE_SHORTS: "/care-shorts",
   ABOUT: "/about",
   CONTACT: "/contact",
   CART: "/cart",
   CHECKOUT: "/checkout",
-  ORDER_SUCCESS: "/order-success", // demo confirmation, opened from checkout with the order in router state
+  ORDER_SUCCESS: "/order-success/:id", // build links with orderSuccessPath()
+  ORDER_DETAIL: "/orders/:id", // build links with orderDetailPath()
   WISHLIST: "/wishlist",
   REWARDS: "/rewards",
 
@@ -29,6 +29,14 @@ export const FRONTEND_ROUTES = {
   // Admin Routes
   ADMIN_LOGIN: "/admin/login",
   ADMIN_DASHBOARD: "/admin/dashboard",
+  ADMIN_USERS: "/admin/users",
+  ADMIN_PRODUCTS: "/admin/products",
+  ADMIN_ADD_PRODUCTS: "/admin/add-products",
+  ADMIN_ORDERS: "/admin/orders",
+  ADMIN_ORDER_DETAIL: "/admin/orders/:id", // build links with adminOrderDetailPath()
+  ADMIN_RETURNS: "/admin/returns",
+  ADMIN_SALES_REPORTS: "/admin/sales-reports",
+  ADMIN_EARNINGS: "/admin/earnings",
 };
 
 // "/shop" or "/shop?combo=true" etc. (the shop keeps its filters in the URL)
@@ -59,3 +67,7 @@ export const productDetailPath = (id, variantId) => {
   const path = generatePath(FRONTEND_ROUTES.PRODUCT_DETAIL, { id });
   return variantId ? `${path}?variant=${variantId}` : path;
 };
+
+export const orderDetailPath = (id) => generatePath(FRONTEND_ROUTES.ORDER_DETAIL, { id });
+export const orderSuccessPath = (id) => generatePath(FRONTEND_ROUTES.ORDER_SUCCESS, { id });
+export const adminOrderDetailPath = (id) => generatePath(FRONTEND_ROUTES.ADMIN_ORDER_DETAIL, { id });

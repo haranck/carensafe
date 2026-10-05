@@ -6,6 +6,7 @@ import {
     loginUser,
     googleLogin,
     adminLogin,
+    adminLogout,
     forgotPassword,
     verifyResetOtp,
     resetPassword,
@@ -62,5 +63,11 @@ export const useResetPassword = () => {
 export const useAdminLogin = () => {
     return useMutation({
         mutationFn: adminLogin,
+    });
+};
+
+export const useAdminLogout = () => {
+    return useMutation({
+        mutationFn: adminLogout,
     });
 };

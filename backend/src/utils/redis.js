@@ -19,6 +19,12 @@ class RedisUtil {
     async delete(key) {
         await redisClient.del(key);
     }
+
+    // SET NX with an expiry: true for the one caller that got the key (locks, "once per N seconds" guards)
+    async acquireLock(key, ttlMs) {
+        const result = await redisClient.set(key, String(process.pid), 'PX', ttlMs, 'NX');
+        return result === 'OK';
+    }
 }
 
 module.exports = new RedisUtil();

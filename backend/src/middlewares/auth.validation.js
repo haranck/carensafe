@@ -9,6 +9,7 @@ const passwordRule = Joi.string().min(8).pattern(new RegExp('^(?=.*[a-z])(?=.*[A
 });
 
 const emailRule = Joi.string().trim().email().required().messages({
+    'string.base': 'Please provide a valid email.',
     'string.email': 'Please provide a valid email.',
     'string.empty': 'Email is required.',
     'any.required': 'Email is required.'
@@ -48,6 +49,23 @@ const resetPasswordSchema = Joi.object({
         'any.required': 'Your reset session is invalid. Please start again.'
     }),
     password: passwordRule
+});
+
+const otpRule = Joi.string().pattern(/^\d{6}$/).required().messages({
+    'string.base': 'Enter the 6-digit code.',
+    'string.pattern.base': 'Enter the 6-digit code.',
+    'string.empty': 'Enter the 6-digit code.',
+    'any.required': 'Enter the 6-digit code.'
+});
+
+// Signup step 2 / resend
+const verifyOtpSchema = Joi.object({
+    email: emailRule,
+    otp: otpRule
+});
+
+const resendOtpSchema = Joi.object({
+    email: emailRule
 });
 
 const loginSchema = Joi.object({
@@ -102,6 +120,8 @@ const validateBody = (schema) => (req, res, next) => {
 
 const validateForgotPassword = validateBody(forgotPasswordSchema);
 const validateVerifyResetOtp = validateBody(verifyResetOtpSchema);
+const validateVerifyOtp = validateBody(verifyOtpSchema);
+const validateResendOtp = validateBody(resendOtpSchema);
 const validateResetPassword = validateBody(resetPasswordSchema);
 
 module.exports = {
@@ -110,5 +130,7 @@ module.exports = {
     validateGoogleAuth,
     validateForgotPassword,
     validateVerifyResetOtp,
-    validateResetPassword
+    validateResetPassword,
+    validateVerifyOtp,
+    validateResendOtp
 };

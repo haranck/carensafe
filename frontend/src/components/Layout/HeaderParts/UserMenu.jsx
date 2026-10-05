@@ -4,12 +4,15 @@ import { AnimatePresence, m } from "framer-motion";
 import { ChevronDown, LogOut } from "lucide-react";
 import { ACCOUNT_LINKS, FOCUS_RING } from "./navConfig";
 import UserAvatar from "../../common/UserAvatar";
+import { useWalletBalance } from "../../../hooks/Wallet/WalletHooks";
+import { formatPaise } from "../../../utils/wallet";
 
 const UserMenu = ({ user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef(null);
   const triggerRef = useRef(null);
   const menuId = useId();
+  const { data: walletBalance } = useWalletBalance();
 
   const firstName = user?.firstName || "Account";
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "My Account";
@@ -71,7 +74,7 @@ const UserMenu = ({ user, onLogout }) => {
             </div>
 
             <ul>
-              {ACCOUNT_LINKS.map(({ label, icon: Icon, to, meta }) => (
+              {ACCOUNT_LINKS.map(({ label, icon: Icon, to, showsWalletBalance }) => (
                 <li key={label}>
                   <Link
                     to={to}
@@ -80,7 +83,9 @@ const UserMenu = ({ user, onLogout }) => {
                   >
                     <Icon size={16} aria-hidden="true" className="text-[#7c3aed]" />
                     <span className="flex-1">{label}</span>
-                    {meta && <span className="text-[12px] font-bold text-[#d6008a]">{meta}</span>}
+                    {showsWalletBalance && walletBalance !== undefined && (
+                      <span className="text-[12px] font-bold text-[#d6008a]">{formatPaise(walletBalance)}</span>
+                    )}
                   </Link>
                 </li>
               ))}

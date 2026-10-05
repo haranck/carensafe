@@ -32,11 +32,11 @@ class WishlistController {
 
     async getWishlistIds(req, res) {
         try {
-            const productIds = await wishlistService.getWishlistProductIds(req.user.userId);
+            const keys = await wishlistService.getWishlistKeys(req.user.userId);
             return res.status(200).json({
                 success: true,
                 message: 'Wishlist ids retrieved successfully',
-                data: productIds
+                data: keys
             });
         } catch (error) {
             const statusCode = error.statusCode || 500;
@@ -53,7 +53,7 @@ class WishlistController {
             const item = await wishlistService.addToWishlist(req.user.userId, productId, variantId);
             return res.status(201).json({
                 success: true,
-                message: 'Product added to wishlist',
+                message: 'Added to wishlist',
                 data: item
             });
         } catch (error) {
@@ -65,13 +65,13 @@ class WishlistController {
         }
     }
 
-    async removeFromWishlist(req, res) {
+    async removeItem(req, res) {
         try {
-            await wishlistService.removeFromWishlist(req.user.userId, req.params.productId);
+            await wishlistService.removeItem(req.user.userId, req.params.itemId);
             return res.status(200).json({
                 success: true,
-                message: 'Product removed from wishlist',
-                data: { productId: req.params.productId }
+                message: 'Removed from wishlist',
+                data: { itemId: req.params.itemId }
             });
         } catch (error) {
             const statusCode = error.statusCode || 500;
@@ -82,10 +82,10 @@ class WishlistController {
         }
     }
 
-    // Adds one to the cart, then removes the product from the wishlist
+    // Adds one of the saved variant to the cart, then removes only that wishlist item
     async moveToCart(req, res) {
         try {
-            const result = await cartService.moveFromWishlist(req.user.userId, req.params.productId, req.body.variantId);
+            const result = await cartService.moveFromWishlist(req.user.userId, req.params.itemId);
             return res.status(200).json({
                 success: true,
                 message: 'Moved to cart',

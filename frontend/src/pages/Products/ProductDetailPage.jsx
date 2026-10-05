@@ -17,6 +17,7 @@ import { useGetProductById } from "../../hooks/Products/ProductHooks";
 import { useCartActions } from "../../hooks/Cart/CartHooks";
 import { CONTAINER, PAGE_BACKGROUND } from "../../constants/customerTheme";
 import { MAX_ORDER_QUANTITY, cleanName } from "../../utils/product";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const NOT_FOUND_STATUSES = [400, 404];
 
@@ -52,14 +53,7 @@ const ProductDetailPage = () => {
     window.scrollTo({ top: 0 });
   }, [id]);
 
-  useEffect(() => {
-    if (!productName) return undefined;
-    const previousTitle = document.title;
-    document.title = `${productName} | Care N Safe`;
-    return () => {
-      document.title = previousTitle;
-    };
-  }, [productName]);
+  usePageTitle(productName || "Product");
 
   // Sticky bar shows once the main purchase buttons have scrolled up out of view
   const actionsRef = useCallback((node) => {
@@ -176,8 +170,8 @@ const ProductDetailPage = () => {
       </LazyMotion>
 
       <Footer />
-      {/* Keeps the end of the footer reachable above the mobile sticky bar */}
-      {isLoaded && showStickyBar && <div aria-hidden="true" className="h-20 bg-[#2c265a] md:hidden" />}
+      {/* Keeps the page end reachable above the mobile sticky bar (phones; no footer there) */}
+      {isLoaded && showStickyBar && <div aria-hidden="true" className="h-20 md:hidden" />}
     </div>
   );
 };

@@ -5,10 +5,12 @@ import { Search, Lock, Unlock, User as UserIcon } from "lucide-react";
 import Pagination from "../../../components/common/Pagination";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { getErrorMessage } from "../../../utils/errorMessage";
+import { usePageTitle } from "../../../hooks/common/usePageTitle";
 
 const displayName = (user) => [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
 
 const AdminUsersPage = () => {
+  usePageTitle("Admin · Users");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);

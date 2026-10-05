@@ -210,10 +210,11 @@ class AuthController {
 
     async logout(req, res) {
         try {
+            // Both tokens of this session are revoked (the access token arrives as the usual Bearer header)
             const refreshToken = req.cookies.refreshToken;
-            if (refreshToken) {
-                await authService.logout(refreshToken);
-            }
+            const authHeader = req.headers.authorization || '';
+            const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+            await authService.logout(refreshToken, accessToken);
 
             res.clearCookie('refreshToken', {
                 httpOnly: true,

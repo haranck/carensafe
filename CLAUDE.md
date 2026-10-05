@@ -5,8 +5,9 @@ with variants). Two independent apps:
 
 ```
 carensafe/
-├── backend/    Express 5 API, CommonJS, MongoDB (Mongoose) + Redis (ioredis)
-└── frontend/   React 19 + Vite SPA, ES modules, Tailwind v4
+├── backend/             Express 5 API, CommonJS, MongoDB (Mongoose) + Redis (ioredis); Dockerfile
+├── frontend/            React 19 + Vite SPA, ES modules, Tailwind v4, PWA (vite-plugin-pwa)
+└── docker-compose.yml   backend + Redis containers (MongoDB stays on Atlas)
 ```
 
 ## Commands
@@ -18,11 +19,14 @@ carensafe/
 | Lint | none | `npm run lint` (ESLint flat config) |
 | Tests | none (`npm test` just fails) | none |
 | Smoke check | `node -e "require('./src/app')"` (loads all modules, no DB needed) | `npm run build` |
+| Docker | `docker compose up -d --build` from the repo root (see **Docker** below) | not containerised |
 
 - Backend startup needs MongoDB **and** Redis reachable; `server.js` exits on either failure.
 - Backend env is validated in `src/config/envValidation.js` (required: `MONGO_URI`, `JWT_ACCESS_SECRET`,
   `JWT_REFRESH_SECRET`; optional: `PORT`, `NODE_ENV`, `FRONTEND_URL`, `REDIS_URL`, `JWT_*_EXPIRES_IN`,
-  `REFRESH_TOKEN_MAX_AGE`, `CLOUDINARY_*`). `utils/email.js` reads `SMTP_*`/`EMAIL_FROM` directly; without
+  `REFRESH_TOKEN_MAX_AGE`, `CLOUDINARY_*`). Razorpay: `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` (required),
+  `RAZORPAY_WEBHOOK_SECRET`, `PAYMENT_EXPIRY_MINUTES`, `REFUND_DESTINATION`, `WALLET_TOPUP_MIN/MAX` (see `backend/docs/PAYMENTS.md`).
+  Optional `CONTACT_EMAIL_TO`: inbox for Contact page messages (defaults to `SMTP_USER`). `utils/email.js` reads `SMTP_*`/`EMAIL_FROM` directly; without
   `SMTP_USER` the OTP is only logged to the console (`[Mock Email]`).
 - Frontend needs `VITE_API_BASE_URL` pointing at the API **including `/api`** (API_ROUTES start at `/user/...`).
   Optional: `VITE_GOOGLE_CLIENT_ID` (Google button), `VITE_MAPBOX_ACCESS_TOKEN` (public `pk.` token, address map).
@@ -40,8 +44,11 @@ app.js mount → routes → middlewares → controller → service → repositor
 ```
 
 Mounted in `src/app.js`: `/api/user/auth`, `/api/user/products`, `/api/user/wishlist`, `/api/user/cart`,
-`/api/user/profile` (the `user/user` route/controller/service files), `/api/user/addresses`,
-`/api/admin/auth`, `/api/admin/users`, `/api/admin/products`.
+`/api/user/profile` (the `user/user` route/controller/service files), `/api/user/addresses`, `/api/user/orders`, `/api/user/wallet`,
+`/api/user/payments`, `/api/payments/razorpay/webhook` (raw body, mounted before `express.json`),
+`/api/user/contact` (public Contact form: saved to `contactmessages`, emailed to `CONTACT_EMAIL_TO` or `SMTP_USER`, rate-limited),
+`/api/admin/auth`, `/api/admin/users`, `/api/admin/products`, `/api/admin/orders`,
+`/api/admin/reports` (dashboard, sales report + PDF export data; sales = delivered / partially returned orders, IST dates).
 `globalErrorHandler` is registered last.
 
 > The `user/user` feature files (`user.routes.js`, `user.controller.js`, `user.service.js`) are the profile API
@@ -124,18 +131,35 @@ throw error;
 `middlewares/error.middleware.js` (`globalErrorHandler`) is only a safety net: it handles `multer.MulterError`
 (400 `Upload Error: ...`, raised by `upload.*` before the controller runs) and anything uncaught (Express 5
 forwards rejected promises). Same JSON shape. Keep the controller try/catch pattern for new code.
+Errors meant for the user that aren't the client's fault use 502/503 (e.g. "Couldn't place your order. Please try
+again." is 503), so a future "hide 500 messages in production" layer won't swallow them.
 
 ### Auth
 
 - `utils/jwt.js` signs `{ userId }` (there are no roles; admins are `isAdmin: true`). Access token 15m, refresh 7d. Refresh rotation and logout
-  blacklist the old token in Redis (`blacklist:<token>`).
+  blacklist the old token in Redis (`blacklist:<token>`); logout also blacklists the access token (checked in `authMiddleware`).
+  Replaying a rotated refresh token (outside a 10s two-tab grace) or resetting the password sets the user's
+  `tokensValidAfter`: every customer token issued before it is rejected (all devices logged out).
+- Auth endpoints are rate-limited (`middlewares/rateLimit.middleware.js`): `authRateLimiter` (login, Google, admin login:
+  10 failures / 15 min / IP), `otpSendRateLimiter` / `otpVerifyRateLimiter` (per IP + email), `passwordCheckRateLimiter`
+  (email change, which also needs the current password). Behind a proxy in production set `app.set('trust proxy', 1)`.
+- Login checks the password before saying an account is admin / blocked.
 - `middlewares/auth.middleware.js` (default export) expects `Authorization: Bearer <token>`, verifies it and sets
   **`req.user = { userId }`**. 401 `{ success:false, message }` otherwise. On every request it also calls
   `authService.verifyActiveUser`: deleted user → 401 "User no longer exists.", blocked → 403 "Your account is blocked."
-  (same text as login/refresh and `USER_ERRORS.USER_BLOCKED`). It does **not** check `isAdmin`. Used by the wishlist and
-  cart routes. Protect new user routes with it: `router.get('/', authMiddleware, (req, res) => ...)` and read `req.user.userId`.
-- Signup is a two-step OTP flow. Pending signup data lives in Redis `signup:<email>` (300s) with
-  `otp_attempts:<email>` (max 3). The user is created only in `verifyOtp`.
+  (same text as login/refresh and `USER_ERRORS.USER_BLOCKED`), admin account → 403 "Admins are not allowed to log in from
+  the user portal." (admin tokens only work on `/api/admin/*`; customer refresh refuses admins too). Used by every
+  customer route that needs a login. Protect new user routes with it: `router.get('/', authMiddleware, (req, res) => ...)` and read `req.user.userId`.
+- **Admin session** (separate from customers): `POST /api/admin/auth/login` returns `{ user, accessToken }` and sets an
+  httpOnly `adminRefreshToken` cookie scoped to `path: /api/admin/auth`; `/refresh` rotates it (old token blacklisted),
+  `/logout` revokes it. `middlewares/adminAuth.middleware.js` guards every other `/api/admin/*` route (`router.use` at the
+  top of each admin route file, so it runs before uploads/validation) and reads `isAdmin`/`isBlocked` from the DB on every
+  request (401 / 403 "Admin access required."). Frontend: `adminSession` Redux slice, `routes/AdminRoute.jsx` guard,
+  `api/axios.js` sends the admin token for `/admin/...` URLs and refreshes via the admin endpoint (one shared refresh per
+  session). Refresh tokens carry a random `jti` so two issued in the same second differ.
+- Signup is a two-step OTP flow. Pending signup data lives in Redis `signup:<email>` (300s; wrong attempts are counted
+  inside it, max 3, without extending the window) and resends wait 30s (`signup_resend_cooldown:<email>`). The user is
+  created only in `verifyOtp`.
 
 ### Validation (Joi)
 
@@ -169,6 +193,30 @@ jpg/jpeg/png/webp, 5 MB). `upload.single('avatar')` → `req.file.path` is the U
 8. Admin counterpart? Use `admin.cart.*` names in `routes/admin/`, `controllers/admin/cart/`, `services/admin/cart/`,
    reuse the same repository, mount at `/api/admin/cart`.
 9. Run `node -e "require('./src/app')"`, then hit the endpoint with the dev server running.
+
+---
+
+## Docker (backend only)
+
+- `backend/Dockerfile`: `node:24-alpine` (`google-auth-library` needs Node >= 22; no build step, plain JS), builder
+  stage `npm ci --omit=dev` + source, final stage copies `/app`, `NODE_ENV=production`, runs as the `node` user,
+  port 3000, `CMD ["node", "server.js"]`. No healthchecks. No Doppler: secrets come from `backend/.env` at run time.
+- `backend/.dockerignore`: `node_modules`, every `.env*`, `docs`, `*.md`, `test_real.png`, Docker files, so secrets are
+  never baked into the image.
+- `docker-compose.yml` (repo root, same layout as the projexa one): `backend` (`image: haranck/carensafe-backend:latest`
+  + `build: ./backend` — comment the build out once the image is on Docker Hub; `env_file: ./backend/.env`;
+  `NODE_ENV=production`, `PORT=3000`, `REDIS_URL=redis://redis:6379`; port `3000:3000`; `init: true` because
+  `server.js` has no SIGTERM handler) + `redis` (`redis:alpine`, published on host port **6380**, no volume: OTPs /
+  token blacklist / locks are short-lived), both on the `app-network` bridge network.
+- Redis must be `REDIS_URL`: the app ignores `REDIS_HOST` / `REDIS_PORT` (Known issues), and "localhost" inside the
+  container is the container itself. MongoDB stays on Atlas via `MONGO_URI` (a `mongodb://localhost…` URI can't work).
+- Commands (repo root): `docker compose up -d --build` · `docker compose logs -f backend` · `docker compose ps` ·
+  `docker compose down` · `docker compose exec backend sh` · push: `docker compose build && docker compose push backend`.
+- Port 3000 clashes with a local `npm start`; change the host side of `ports` (`"3001:3000"`) to run both.
+- Production: secure cookies need HTTPS (put the container behind an HTTPS reverse proxy), exact `FRONTEND_URL`
+  (CORS), public HTTPS URL for the Razorpay webhook (`https://<api-host>/api/payments/razorpay/webhook`), the site
+  origin in Google OAuth, and `trust proxy` (see Known issues). Several backend containers can share one database and
+  Redis: the payment jobs take a Redis lock, so only one runs them each minute.
 
 ---
 
@@ -241,6 +289,11 @@ Pattern from `components/Auth/LoginForm.jsx`:
   `UPDATE_VARIANT: (id, variantId) => \`/admin/products/${id}/variants/${variantId}\``. No URL literals in services.
 - `constants/frontendRoutes.js` → `FRONTEND_ROUTES.<NAME>` for page paths. Use it in `<Route>`, `navigate()`, `<Link>`.
 - `constants/errorMessages.js` → backend message strings the UI matches on (must equal the backend text exactly).
+- Page titles: every page calls `usePageTitle("Shop")` (`hooks/common/usePageTitle.js` → "CareNsafe | Shop"; admin pages
+  "CareNsafe | Admin · Orders"). New pages must call it too.
+- PWA (`vite-plugin-pwa` in `vite.config.js`, production builds only): manifest + Workbox service worker,
+  `registerType: "prompt"` with `components/common/PwaUpdatePrompt.jsx` ("New version available"). Only the app shell,
+  Cloudinary images, Google Fonts and same-origin images are cached; never API responses. Icons in `public/icons/`.
 
 ### Checklist: adding a frontend feature (e.g. Cart)
 
@@ -302,7 +355,7 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - **No new npm packages** (either app) without asking first. Everything listed in package.json is available.
 - Before any change touching more than ~2 files, or both apps, write a short plan (files + what changes) and get confirmation.
 - After changes: frontend `npm run lint` + `npm run build`; backend `node -e "require('./src/app')"`.
-  Lint has a pre-existing baseline of 14 errors / 1 warning, so don't add new ones and report the before/after.
+  Lint has a pre-existing baseline of 15 errors / 1 warning, so don't add new ones and report the before/after.
 - Backend stays CommonJS (`require`/`module.exports`), frontend stays ESM `.jsx`/`.js`. No TypeScript files.
 - Never read, edit, print or commit `.env` files or secrets; never hardcode credentials or URLs that belong in env.
   Add new env vars to `envValidation.js` and tell the user which to set.
@@ -311,46 +364,59 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 
 ---
 
-## Known issues (as of 2026-10-03)
+## Known issues (as of 2026-10-05)
 
 **Security**
-- **Admin API is unauthenticated**: `/api/admin/users` and `/api/admin/products` have no middleware;
-  `authMiddleware` is never mounted; there's no admin-role check (the JWT has no `isAdmin`). Admin login
-  (`admin.auth.service`) returns no token, and `AdminLoginForm` just navigates. `/admin/*` frontend routes have no guard.
-- Global rate limiter is commented out in `app.js`; login/OTP endpoints are unthrottled.
-- OTP brute-force guard is weak: a wrong attempt resets `otp_attempts:<email>` TTL to 30s while the signup key lives 300s.
-- `frontend/.env` is tracked in git (`frontend/.gitignore` doesn't ignore `.env`).
-- Logout (`hooks/Auth/useLogout.js`) blacklists only the refresh token: the access token stays valid for up to 15 min.
-- `services/user/auth/email.service.js` logs every OTP to the server console (`[Console] Generated OTP`).
+- `app.js` doesn't set `trust proxy`: behind any reverse proxy / Docker host every visitor has the proxy's IP, so one
+  person's failed logins rate-limit everyone. Add `if (env.NODE_ENV === 'production') app.set('trust proxy', 1);` before
+  deploying (2 behind Cloudflare + a host proxy).
+- CORS also allows `http://localhost:5173/5174` in production, and 500 responses send the raw internal error message
+  (e.g. Mongo errors) to the client. No security headers (`X-Powered-By` is on).
+- Global rate limiter is commented out in `app.js` (auth, contact, order/payment endpoints have their own limiters).
+- Customer access tokens are persisted in localStorage (redux-persist `token`), readable by any XSS.
+- `npm audit`: `cloudinary` <2.7.0 (high, argument injection via `&` in parameters). Not reachable here (upload params
+  are fixed server-side, deleted ids come from the DB); the fix is a breaking v2 upgrade that conflicts with
+  `multer-storage-cloudinary`.
 - Product images upload to `carensafe/products` (avatars use their own `avatarUpload` → `carensafe/avatars`).
 
 **Bugs**
 - `infrastructure/cache/redisClient.js` falls back to `env.REDIS_HOST/REDIS_PORT`, which `envValidation.js` never
   exports (`parseRedisHost/parseRedisPort` are unused). It only works because ioredis defaults to localhost:6379.
-- OTP email text says "expires in 30 seconds"; actual TTL is 300s.
 - Signup zod schema is weaker than Joi (no lowercase/special-char rule), so the server rejects passwords the form accepts.
 - `ProductModal.jsx` calls hooks after an early `return null` (rules-of-hooks) and imports via `'../../../src/hooks/...'`.
 - `AdminProductsPage` calls `toast.error` during render. `keepPreviousData: true` in `AdminHooks.js` is ignored (v5).
-- `AdminDashboardPage` uses dynamic Tailwind classes (`bg-${statusColor}-50`) and hardcoded mock stats/orders.
-- Admin login (`admin.auth.service`) still calls `bcrypt.compare` for users without a password → 500 instead of 401
-  (user login now answers 400 "This account uses Google sign-in...").
 - Cloudinary uploads happen before controller validation; rejected requests and removed variant images are never
   deleted (orphans).
 
 **Structure / inconsistencies**
-- Empty, unmounted stub: `routes/user/order/order.routes.js`. Orders in the profile area are mock data
-  (`constants/mockOrders.js`, read via `useGetMyOrders`). There is no wallet backend (the Wallet tab shows ₹0.00).
-  No order model, controller or service exists (the cart does: `/api/user/cart`, shipping rules in `config/shipping.js`).
-  `/checkout` is a **demo** (`pages/Checkout/*`): Place Order waits 1.5s and opens `/order-success` with the order in router
-  state; nothing is saved, no payment is taken and the cart isn't cleared. Money rows come from `utils/checkout.js` `checkoutTotals`.
+- **Payments**: read `backend/docs/PAYMENTS.md` before touching money code. Paise everywhere in payment/wallet code,
+  `utils/transaction.js` `withTransaction` for every money change (never call Razorpay inside it), idempotency keys on
+  every wallet/payment write, `services/user/payment/payment.service.js` owns Razorpay (checkout, verify, webhook,
+  reconcile, expiry + refund jobs in `src/jobs/payment.jobs.js`), `orderService.refundForOrderItems` owns refunds.
+- Orders: rules in `config/orders.js` (statuses, transitions, 7-day return window, cancel reasons), pure helpers
+  in `utils/order.js`, logic in `services/user/order/order.service.js` (placing: one transaction for stock + order + cart
+  clear; cancel / return per item) and `services/admin/order/admin.order.service.js`. Customer responses carry
+  `canCancel` / `canReturn` flags so the UI never re-implements the rules. COD refunds are manual (`pricing.refundableAmount`);
+  online payments are live (Razorpay, wallet, wallet + online; see `backend/docs/PAYMENTS.md`).
+- Wallet (`services/user/wallet/wallet.service.js`): money in integer **paise** (orders stay in rupees; convert with
+  `toPaise`). Read-only API (`GET /api/user/wallet`, `/transactions`); only server code credits it. `credit`/`debit` are
+  idempotent via a unique `idempotencyKey` (`refund:<orderId>:<itemId>`) and join the caller's transaction. Online-paid
+  orders (`isPrepaid`: online and/or wallet) refund received returns and cancelled lines (`refundForItemPaise`, item `refund`,
+  `pricing.refundedAmount`, payment status `partially_refunded`/`refunded`); COD orders never do. Top-ups go through
+  Razorpay (`POST /api/user/wallet/topup`, credited only after verification).
+- Some products share variant `_id`s (duplicated product documents). Orders, stock and the wishlist use product + variant
+  together; the cart's one-line-per-variant check does not.
+- The wishlist is per VARIANT (unique `{ user, product, variant }`; `scripts/migrate-wishlist-variants.js [--dry-run]`
+  dropped the old `{ user, product }` index). `/ids` returns `[{ itemId, productId, variantId }]`; remove / move-to-cart use
+  the item id (`/items/:itemId`). Frontend `useWishlistIds` is a Map keyed `wishlistKeyOf(productId, variantId)`.
 - Addresses can carry an optional map pin: `location` GeoJSON Point **[lng, lat]** (2dsphere index, Joi rejects points
   outside India) + `formattedAddress`. The address form's map (`components/Address/LocationPicker.jsx`, lazy `mapbox-gl`)
   and reverse geocoding need `VITE_MAPBOX_ACCESS_TOKEN`; without it the location section is hidden. Pincodes are checked
   against India Post (`constants/externalApis.js`), failing open when it's down.
 - `repositories/admin/` is empty; admin services use `repositories/user/*`. `repositories/user/auth/auth.repository.js`
-  duplicates `user.repository.js` and is used only by `admin.auth.service.js`. `AuthService.adminLogin` is dead code
+  duplicates `user.repository.js` and is no longer used anywhere. `AuthService.adminLogin` is dead code
   duplicating `AdminAuthService.adminLogin`.
-- Joi covers only signup/login. Verify-OTP, resend-OTP and all admin endpoints validate ad hoc (some in controllers).
+- Some admin endpoints still validate ad hoc (some in controllers).
 - `utils/email.js` reads `process.env` directly. There's no `.env.example` in either app.
 - Backend has both `redis` and `ioredis` installed (only `ioredis` is used), plus `typescript`/`@types/node`
   devDeps with no TS in the project. There's no backend lint or tests anywhere.
@@ -360,8 +426,7 @@ Folders are PascalCase per feature (`Auth/`, `Admin/`, `Cart/`). Admin features 
 - `AdminRoutes.jsx` redefines a local `FRONTEND_ROUTES`. Many paths are hardcoded (`"/home"`, `"/admin/products"`,
   axios `/user/auth/refresh`). `FRONTEND_ROUTES` lacks the admin sub-pages.
 - `pages/Auth/AuthPage.jsx` is unused (not routed) and has lint errors. Login, Signup and Auth pages duplicate the same branding block.
-- Links to routes that don't exist: `/shop`, `/orders`, `/wishlist`, `/about`, `/technology`, `/care-shorts`,
-  `/contact`, `/profile`, `/forgot-password`. There's no 404 route. Only `/home` is lazy-loaded.
+- Links to routes that don't exist: `/technology`, `/care-shorts`, `/forgot-password` (About is `/about`, Contact `/contact`). There's no 404 route. Only `/home` is lazy-loaded.
 - `index.css` has a leftover dark theme, unused `.glass-*`/`.btn-*`/`.input-field` classes and `.Toastify__*`
   overrides (the app uses react-hot-toast). `tailwind.config.js` is ignored by v4, autoprefixer in
   `postcss.config.js` is redundant, and `App.css` is empty.

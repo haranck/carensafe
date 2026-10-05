@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { LogOut, ChevronDown } from "lucide-react";
 
 const AdminHeader = ({ isSidebarOpen, setIsSidebarOpen, handleLogout }) => {
-  const initial = "A";
+  const admin = useSelector((state) => state.adminSession?.user);
+  const adminName = [admin?.firstName, admin?.lastName].filter(Boolean).join(" ") || "Admin";
+  const initial = adminName[0].toUpperCase();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -47,10 +50,10 @@ const AdminHeader = ({ isSidebarOpen, setIsSidebarOpen, handleLogout }) => {
           <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-slate-100 py-1.5 overflow-hidden">
             <div className="px-4 py-2.5 border-b border-slate-50">
               <p className="text-[13px] font-semibold text-slate-700 truncate">
-                System Admin
+                {adminName}
               </p>
               <p className="text-[11px] text-slate-400 truncate">
-                admin@caren-safe.com
+                {admin?.email}
               </p>
             </div>
             

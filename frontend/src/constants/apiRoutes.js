@@ -34,8 +34,8 @@ export const API_ROUTES = {
         LIST: "/user/wishlist",
         IDS: "/user/wishlist/ids",
         ADD: "/user/wishlist",
-        REMOVE: (productId) => `/user/wishlist/${productId}`,
-        MOVE_TO_CART: (productId) => `/user/wishlist/${productId}/move-to-cart`,
+        REMOVE: (itemId) => `/user/wishlist/items/${itemId}`,
+        MOVE_TO_CART: (itemId) => `/user/wishlist/items/${itemId}/move-to-cart`,
     },
     CART: {
         GET: "/user/cart",
@@ -47,8 +47,32 @@ export const API_ROUTES = {
         MOVE_TO_WISHLIST: (itemId) => `/user/cart/items/${itemId}/move-to-wishlist`,
         CLEAR: "/user/cart",
     },
+    ORDERS: {
+        PLACE: "/user/orders",
+        LIST: "/user/orders",
+        DETAIL: (id) => `/user/orders/${id}`,
+        CANCEL: (id) => `/user/orders/${id}/cancel`,
+        RETRY_PAYMENT: (id) => `/user/orders/${id}/retry-payment`,
+        CANCEL_ITEM: (id, itemId) => `/user/orders/${id}/items/${itemId}/cancel`,
+        RETURN: (id) => `/user/orders/${id}/return`,
+        RETURN_ITEM: (id, itemId) => `/user/orders/${id}/items/${itemId}/return`,
+    },
+    WALLET: {
+        GET: "/user/wallet",
+        TRANSACTIONS: "/user/wallet/transactions",
+        TOPUP: "/user/wallet/topup",
+    },
+    CONTACT: {
+        SEND: "/user/contact",
+    },
+    PAYMENTS: {
+        VERIFY: "/user/payments/verify",
+        FAILED: "/user/payments/failed",
+    },
     ADMIN_AUTH: {
         LOGIN: "/admin/auth/login",
+        REFRESH: "/admin/auth/refresh",
+        LOGOUT: "/admin/auth/logout",
     },
     ADMIN_USERS: {
         GET_ALL: "/admin/users",
@@ -60,5 +84,20 @@ export const API_ROUTES = {
         CREATE: "/admin/products",
         UPDATE_STATUS: (id) => `/admin/products/${id}/status`,
         UPDATE_VARIANT: (id, variantId) => `/admin/products/${id}/variants/${variantId}`,
+    },
+    ADMIN_ORDERS: {
+        GET_ALL: "/admin/orders",
+        STATS: "/admin/orders/stats",
+        RETURNS: "/admin/orders/returns",
+        DETAIL: (id) => `/admin/orders/${id}`,
+        UPDATE_STATUS: (id) => `/admin/orders/${id}/status`,
+        CANCEL: (id) => `/admin/orders/${id}/cancel`,
+        DECIDE_RETURN: (id, itemId) => `/admin/orders/${id}/items/${itemId}/return`,
+        RETURN_RECEIVED: (id, itemId) => `/admin/orders/${id}/items/${itemId}/return/received`,
+    },
+    ADMIN_REPORTS: {
+        DASHBOARD: "/admin/reports/dashboard",
+        SALES: "/admin/reports/sales",
+        SALES_EXPORT: "/admin/reports/sales/export",
     }
 };

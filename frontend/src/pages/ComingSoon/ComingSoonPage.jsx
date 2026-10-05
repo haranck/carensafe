@@ -1,4 +1,4 @@
-import { useEffect, useId } from "react";
+import { useId } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 import { ArrowRight, CreditCard, Gift, Sparkles } from "lucide-react";
@@ -6,6 +6,7 @@ import Header from "../../components/Layout/Header";
 import Footer from "../../components/Layout/Footer";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 import { CONTAINER, FOCUS_RING, PAGE_BACKGROUND, PINK_BUTTON } from "../../constants/customerTheme";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 // Account pages that are linked from the header but not built yet (all behind ProtectedRoute)
 const PAGES = {
@@ -20,13 +21,7 @@ const ComingSoonPage = () => {
   const { pathname } = useLocation();
   const { title, icon: Icon } = PAGES[pathname] || FALLBACK;
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = `${title} | Care N Safe`;
-    return () => {
-      document.title = previousTitle;
-    };
-  }, [title]);
+  usePageTitle(title);
 
   return (
     <div className={`min-h-screen flex flex-col font-sans ${PAGE_BACKGROUND}`}>

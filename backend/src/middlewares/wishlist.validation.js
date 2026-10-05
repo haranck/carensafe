@@ -9,16 +9,13 @@ const objectId = (label) =>
         'any.required': `${label[0].toUpperCase()}${label.slice(1)} id is required.`
     });
 
+// Each size is saved separately: the variant is required
 const addToWishlistSchema = Joi.object({
     productId: objectId('product').required(),
-    variantId: objectId('variant')
-});
-
-const productIdSchema = objectId('product').required();
-
-const moveToCartSchema = Joi.object({
     variantId: objectId('variant').required()
 });
+
+const itemIdSchema = objectId('wishlist item').required();
 
 const wishlistQuerySchema = Joi.object({
     page: Joi.number().integer().min(1).messages({
@@ -40,8 +37,8 @@ const validateAddToWishlist = (req, res, next) => {
     next();
 };
 
-const validateWishlistProductId = (req, res, next) => {
-    const { error } = productIdSchema.validate(req.params.productId);
+const validateWishlistItemId = (req, res, next) => {
+    const { error } = itemIdSchema.validate(req.params.itemId);
     if (error) {
         return res.status(400).json({ success: false, message: error.details[0].message });
     }
@@ -56,12 +53,4 @@ const validateWishlistQuery = (req, res, next) => {
     next();
 };
 
-const validateMoveToCart = (req, res, next) => {
-    const { error } = moveToCartSchema.validate(req.body || {});
-    if (error) {
-        return res.status(400).json({ success: false, message: error.details[0].message });
-    }
-    next();
-};
-
-module.exports = { validateAddToWishlist, validateWishlistProductId, validateWishlistQuery, validateMoveToCart };
+module.exports = { validateAddToWishlist, validateWishlistItemId, validateWishlistQuery };

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { LazyMotion, MotionConfig, domAnimation } from "framer-motion";
@@ -39,13 +39,6 @@ const ProfileLayout = () => {
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const openLogout = () => setIsLogoutOpen(true);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = "My Account | Care N Safe";
-    return () => {
-      document.title = previousTitle;
-    };
-  }, []);
 
   return (
     <div className={`min-h-screen flex flex-col font-sans ${PAGE_BACKGROUND}`}>

@@ -9,8 +9,10 @@ import ChangeEmailModal from "../../components/Profile/ChangeEmailModal";
 import SectionError from "../../components/Home/SectionError";
 import { useGetProfile } from "../../hooks/Profile/ProfileHooks";
 import { FOCUS_RING } from "../../constants/customerTheme";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const ProfileEditPage = () => {
+  usePageTitle("Edit Profile");
   const { data, isLoading, isError, isFetching, refetch } = useGetProfile();
   const [isEmailOpen, setIsEmailOpen] = useState(false);
   const profile = data?.data;

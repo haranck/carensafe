@@ -5,8 +5,10 @@ import toast from "react-hot-toast";
 import { useCreateProduct } from "../../../hooks/Admin/AdminHooks";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { getErrorMessage } from "../../../utils/errorMessage";
+import { usePageTitle } from "../../../hooks/common/usePageTitle";
 
 const AdminAddProductPage = () => {
+  usePageTitle("Admin · Add Product");
   const [formData, setFormData] = useState({
     name: "",
     description: "",

@@ -61,6 +61,12 @@ const userSchema = new mongoose.Schema(
         isAdmin: {
             type: Boolean,
             default: false
+        },
+
+        // Customer sessions (access and refresh tokens) issued before this moment are rejected: set on password reset
+        // and when a stolen refresh token is detected, which logs the account out on every device
+        tokensValidAfter: {
+            type: Date
         }
     },
     {

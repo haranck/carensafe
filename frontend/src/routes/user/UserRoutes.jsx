@@ -22,6 +22,7 @@ const WishlistPage = lazy(() => import("../../pages/Wishlist/WishlistPage"));
 const CartPage = lazy(() => import("../../pages/Cart/CartPage"));
 const CheckoutPage = lazy(() => import("../../pages/Checkout/CheckoutPage"));
 const OrderSuccessPage = lazy(() => import("../../pages/Checkout/OrderSuccessPage"));
+const OrderDetailPage = lazy(() => import("../../pages/Orders/OrderDetailPage"));
 const ProfileLayout = lazy(() => import("../../pages/Profile/ProfileLayout"));
 const ProfileDashboardPage = lazy(() => import("../../pages/Profile/ProfileDashboardPage"));
 const ProfileEditPage = lazy(() => import("../../pages/Profile/ProfileEditPage"));
@@ -29,6 +30,8 @@ const ProfileOrdersPage = lazy(() => import("../../pages/Profile/ProfileOrdersPa
 const ProfileAddressesPage = lazy(() => import("../../pages/Profile/ProfileAddressesPage"));
 const ProfileWalletPage = lazy(() => import("../../pages/Profile/ProfileWalletPage"));
 const ComingSoonPage = lazy(() => import("../../pages/ComingSoon/ComingSoonPage"));
+const AboutPage = lazy(() => import("../../pages/About/AboutPage"));
+const ContactPage = lazy(() => import("../../pages/Contact/ContactPage"));
 
 // Download the lazy pages' code while the browser is idle, so moving between pages never waits on it
 const usePreloadPages = () => {
@@ -62,6 +65,8 @@ const UserRoutes = () => {
                 {/* Open to everyone, logged in or not (actions that need an account go through useRequireAuth) */}
                 <Route path={FRONTEND_ROUTES.SHOP} element={<ShopPage />} />
                 <Route path={FRONTEND_ROUTES.PRODUCT_DETAIL} element={<ProductDetailPage />} />
+                <Route path={FRONTEND_ROUTES.ABOUT} element={<AboutPage />} />
+                <Route path={FRONTEND_ROUTES.CONTACT} element={<ContactPage />} />
 
                 {/* Member home; guests are sent to the landing page (same sections) quietly */}
                 <Route element={<ProtectedRoute guestRedirect={FRONTEND_ROUTES.LANDING} />}>
@@ -74,6 +79,7 @@ const UserRoutes = () => {
                     <Route path={FRONTEND_ROUTES.CART} element={<CartPage />} />
                     <Route path={FRONTEND_ROUTES.CHECKOUT} element={<CheckoutPage />} />
                     <Route path={FRONTEND_ROUTES.ORDER_SUCCESS} element={<OrderSuccessPage />} />
+                    <Route path={FRONTEND_ROUTES.ORDER_DETAIL} element={<OrderDetailPage />} />
                     <Route path={FRONTEND_ROUTES.REWARDS} element={<ComingSoonPage />} />
 
                     {/* Profile area: shared sidebar / tab layout, each tab its own lazy chunk */}

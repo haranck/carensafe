@@ -5,7 +5,8 @@ import { CONTAINER } from "../../../constants/customerTheme";
 
 const ROTATE_MS = 3000;
 
-const AnnouncementBar = () => {
+// className: extra classes on the root (e.g. hide it on phones)
+const AnnouncementBar = ({ className = "" }) => {
   const [index, setIndex] = useState(0);
   const reduceMotion = useReducedMotion();
 
@@ -19,7 +20,7 @@ const AnnouncementBar = () => {
   const { icon: ActiveIcon, label: activeLabel } = TRUST_POINTS[index];
 
   return (
-    <div className={`${BRAND_GRADIENT} text-white/90 text-[11px] font-medium tracking-wide`}>
+    <div className={`${BRAND_GRADIENT} text-white/90 text-[11px] font-medium tracking-wide ${className}`}>
       <div className={`${CONTAINER} h-8 flex items-center justify-center`}>
         <div className="md:hidden flex items-center justify-center overflow-hidden">
           <AnimatePresence mode="wait" initial={false}>

@@ -2,7 +2,10 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setAdminSession } from "../../../store/slices/adminSessionSlice";
+import { FRONTEND_ROUTES } from "../../../constants/frontendRoutes";
 import { Mail, Lock, AlertCircle, Eye, EyeOff, Shield } from "lucide-react";
 import { useAdminLogin } from "../../../hooks/Auth/AuthHooks";
 import { getErrorMessage } from "../../../utils/errorMessage";
@@ -62,12 +65,17 @@ const AdminLoginForm = () => {
 
     const { mutate, isPending, isError, error } = useAdminLogin();
     const navigate = useNavigate();
+    const location = useLocation();
+    const dispatch = useDispatch();
 
     const onSubmit = (data) => {
         mutate(data, {
-            onSuccess: () => {
-                // Admin login successful: skip JWT/Redux and go straight to dashboard
-                navigate("/admin/dashboard");
+            onSuccess: (res) => {
+                // Admin session (its own token; the refresh token is an httpOnly cookie). Back to the admin page that
+                // sent us here, else the dashboard.
+                dispatch(setAdminSession(res.data));
+                const from = location.state?.from?.pathname;
+                navigate(from?.startsWith("/admin/") && from !== FRONTEND_ROUTES.ADMIN_LOGIN ? from : FRONTEND_ROUTES.ADMIN_DASHBOARD, { replace: true });
             }
         });
     };

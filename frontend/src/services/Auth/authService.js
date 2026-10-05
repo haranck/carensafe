@@ -72,3 +72,9 @@ export const adminLogin = async (data) => {
     );
     return response.data;
 };
+
+// Revokes the admin refresh cookie; the admin session in Redux is cleared by the caller
+export const adminLogout = async () => {
+    const response = await AxiosInstance.post(API_ROUTES.ADMIN_AUTH.LOGOUT);
+    return response.data;
+};

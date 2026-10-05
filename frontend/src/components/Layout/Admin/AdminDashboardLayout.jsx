@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { clearAccessToken } from "../../../store/slices/tokenSlice";
-import { clearAuth } from "../../../store/slices/authSlice";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearAdminSession } from "../../../store/slices/adminSessionSlice";
+import { useAdminLogout } from "../../../hooks/Auth/AuthHooks";
+import { FRONTEND_ROUTES } from "../../../constants/frontendRoutes";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 
@@ -10,11 +12,20 @@ const AdminDashboardLayout = () => {
   const dispatch = useDispatch();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  const handleLogout = () => {
-    dispatch(clearAccessToken());
-    dispatch(clearAuth());
-    window.location.href = "/admin/login";
-  };
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { mutate: logout } = useAdminLogout();
+
+  // Revokes the admin refresh cookie, then ends only the admin session (a customer session in this browser stays)
+  // and drops the cached admin data. Done even if the request fails, so logging out always works.
+  const handleLogout = () =>
+    logout(undefined, {
+      onSettled: () => {
+        dispatch(clearAdminSession());
+        queryClient.removeQueries({ predicate: (query) => String(query.queryKey[0]).startsWith("admin_") });
+        navigate(FRONTEND_ROUTES.ADMIN_LOGIN, { replace: true });
+      },
+    });
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans">

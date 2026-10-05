@@ -1,9 +1,31 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { INFO_LINKS, showsBottomNav } from "./HeaderParts/navConfig";
 import { ShieldCheck } from "lucide-react";
+import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 
+// Pages that don't exist yet stay "#" until they do
+const QUICK_LINKS = [
+  { label: "Shop All Products", to: FRONTEND_ROUTES.SHOP },
+  { label: "About Us", to: FRONTEND_ROUTES.ABOUT },
+  { label: "Technology & Care", to: "#" },
+  { label: "Educational Videos", to: "#" },
+  { label: "Contact Us", to: FRONTEND_ROUTES.CONTACT },
+];
+// About Us is already under Quick Links
+const SUPPORT_LINKS = INFO_LINKS.filter((link) => link.to !== FRONTEND_ROUTES.ABOUT);
+
+/**
+ * Tablets and up only: phones reach the same links through the menu drawer ("Info") and the profile dashboard.
+ * Below lg the bottom tab bar is pinned over the page end, so a spacer keeps the last content (or the footer) clear.
+ */
 export const Footer = () => {
+  const { pathname } = useLocation();
+  const hasBottomNav = showsBottomNav(pathname);
   return (
-    <footer className="bg-[#2c265a] text-slate-300 py-10 px-4 sm:px-6 lg:px-8 font-sans border-t border-slate-700/50">
+    <>
+      {/* Phones: room for the bottom tab bar (the footer itself is hidden) */}
+      {hasBottomNav && <div aria-hidden="true" className="h-24 md:hidden" />}
+    <footer className="hidden md:block bg-[#2c265a] text-slate-300 py-10 px-4 sm:px-6 lg:px-8 font-sans border-t border-slate-700/50">
       <div className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         
         {/* Brand Column */}
@@ -39,18 +61,18 @@ export const Footer = () => {
         <div>
           <h4 className="text-white font-bold mb-3 text-xs tracking-wide">Quick Links</h4>
           <ul className="space-y-2 text-[11px]">
-            {["Shop All Products", "About Us", "Technology & Care", "Educational Videos", "Contact Us"].map(l => (
-              <li key={l}><Link to="#" className="hover:text-white transition-colors">{l}</Link></li>
+            {QUICK_LINKS.map(({ label, to }) => (
+              <li key={label}><Link to={to} className="hover:text-white transition-colors">{label}</Link></li>
             ))}
           </ul>
         </div>
 
         {/* Policies */}
         <div>
-          <h4 className="text-white font-bold mb-3 text-xs tracking-wide">Policies & Support</h4>
+          <h4 className="text-white font-bold mb-3 text-xs tracking-wide">Help & Support</h4>
           <ul className="space-y-2 text-[11px]">
-            {["Shipping & Delivery", "Refund & Cancellation", "Terms & Conditions", "Privacy Policy", "Customer Support"].map(l => (
-              <li key={l}><Link to="#" className="hover:text-white transition-colors">{l}</Link></li>
+            {SUPPORT_LINKS.map(({ label, to }) => (
+              <li key={label}><Link to={to} className="hover:text-white transition-colors">{label}</Link></li>
             ))}
           </ul>
         </div>
@@ -80,7 +102,10 @@ export const Footer = () => {
           ))}
         </div>
       </div>
+      {/* Tablets: room for the bottom tab bar, so the end of the footer isn't hidden behind it */}
+      {hasBottomNav && <div aria-hidden="true" className="h-20 lg:hidden" />}
     </footer>
+    </>
   );
 };
 

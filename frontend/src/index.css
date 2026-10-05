@@ -7,6 +7,13 @@
 /* Tailwind theme tokens → generates the `font-accent` utility (italic serif accent words) */
 @theme {
   --font-accent: "Playfair Display", Georgia, "Times New Roman", serif;
+  /* `animate-toast-progress`: the toast's time-left bar (AppToast sets the length) */
+  --animate-toast-progress: toast-progress 3s linear forwards;
+
+  @keyframes toast-progress {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+  }
 }
 
 /* ─── CSS Custom Properties / Design Tokens ─────────────────────────────── */
@@ -51,6 +58,31 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* No sideways sliding: decorative shapes / glows that reach past the screen edge are cut off. `clip` doesn't create
+   a scroll container, so position: sticky and window scrolling keep working. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Older Safari (iOS 15 and below) ignores `clip` */
+@supports not (overflow-x: clip) {
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* iPhone / iPad zoom into any text field under 16px when it's tapped and stay zoomed, which makes the page look shifted
+   and slide sideways. 16px fields on iOS prevent that (unlayered, so it wins over the Tailwind text sizes). */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 body {

@@ -88,7 +88,7 @@ const OtpModal = ({ isOpen, onClose, email }) => {
     const resendErrorMsg = resendError ? getErrorMessage(resendError, "Couldn't resend the code. Please try again.") : "";
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-3 sm:p-4">
             <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden relative transform transition-all">
                 {/* Close Button */}
                 <button 
@@ -98,7 +98,7 @@ const OtpModal = ({ isOpen, onClose, email }) => {
                     <X size={24} />
                 </button>
 
-                <div className="p-10 pt-12 flex flex-col items-center">
+                <div className="px-5 pb-8 pt-12 sm:p-10 sm:pt-12 flex flex-col items-center">
                     <div className="w-14 h-14 bg-pink-50 rounded-full flex items-center justify-center mb-5">
                         <ShieldCheck className="text-[#d6008a]" size={28} />
                     </div>
@@ -126,7 +126,7 @@ const OtpModal = ({ isOpen, onClose, email }) => {
                      </div>
                     )}
 
-                    <div className="flex gap-3 mb-8">
+                    <div className="flex gap-2 sm:gap-3 mb-8">
                         {otp.map((digit, idx) => (
                             <input
                                 key={idx}
@@ -136,7 +136,7 @@ const OtpModal = ({ isOpen, onClose, email }) => {
                                 value={digit}
                                 onChange={(e) => handleChange(e, idx)}
                                 onKeyDown={(e) => handleKeyDown(e, idx)}
-                                className="w-12 h-14 text-center text-xl font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#d6008a] focus:ring-1 focus:ring-[#d6008a] transition-all"
+                                className="h-12 w-10 sm:h-14 sm:w-12 text-center text-xl font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#d6008a] focus:ring-1 focus:ring-[#d6008a] transition-all"
                             />
                         ))}
                     </div>

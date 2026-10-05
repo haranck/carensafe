@@ -4,6 +4,8 @@ import ExploreProducts from "./ExploreProducts";
 import WhyCareNSafe from "./WhyCareNSafe";
 import Testimonials from "./Testimonials";
 import CtaBanner from "./CtaBanner";
+import BannerSlider from "./BannerSlider";
+import AboutTeaser from "./AboutTeaser";
 import { ViewAllLink } from "./SectionHeading";
 import { shopPath } from "../../constants/frontendRoutes";
 
@@ -28,6 +30,8 @@ const HomeSections = () => (
       layout="carousel"
       action={<ViewAllLink />}
     />
+
+    <BannerSlider />
 
     <ProductSection
       heading={{
@@ -54,6 +58,7 @@ const HomeSections = () => (
       action={<ViewAllLink to={shopPath({ combo: true })} />}
     />
 
+    <AboutTeaser />
     <ExploreProducts />
     <WhyCareNSafe />
     <Testimonials />

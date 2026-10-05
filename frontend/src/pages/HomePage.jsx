@@ -5,9 +5,11 @@ import Footer from "../components/Layout/Footer";
 import HomeHero from "../components/Home/HomeHero";
 import HomeSections from "../components/Home/HomeSections";
 import { PAGE_BACKGROUND } from "../constants/customerTheme";
+import { usePageTitle } from "../hooks/common/usePageTitle";
 
 // Member home (/home): welcome hero + the shared home sections (the guest landing page "/" shows the same sections)
 const HomePage = () => {
+  usePageTitle("Home");
   const user = useSelector((state) => state.auth.user);
 
   return (

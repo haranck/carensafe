@@ -227,7 +227,7 @@ class CartService {
     // if saving fails the line goes back into the cart. Already in the wishlist counts as moved.
     async moveToWishlist(userId, itemId) {
         const line = findLine(await cartRepository.findByUser(userId), itemId);
-        const alreadySaved = await wishlistRepository.findOne({ user: userId, product: line.product });
+        const alreadySaved = await wishlistRepository.findOne({ user: userId, product: line.product, variant: line.variant });
 
         await cartRepository.pullItem(userId, itemId);
         if (!alreadySaved) {
@@ -246,15 +246,11 @@ class CartService {
         return this.getCart(userId);
     }
 
-    // Wishlist "Move to Cart": add one to the cart, then remove the product from the wishlist
-    async moveFromWishlist(userId, productId, variantId) {
-        const saved = await wishlistRepository.findOne({ user: userId, product: productId });
-        if (!saved) {
-            throw httpError('Product is not in your wishlist.', 404);
-        }
-
-        const result = await this.addItem(userId, productId, variantId, 1);
-        await wishlistService.removeFromWishlist(userId, productId);
+    // Wishlist "Move to Cart": add one of exactly the saved variant, then remove only that wishlist item
+    async moveFromWishlist(userId, wishlistItemId) {
+        const saved = await wishlistService.getItem(userId, wishlistItemId);
+        const result = await this.addItem(userId, String(saved.product), String(saved.variant), 1);
+        await wishlistService.removeItem(userId, wishlistItemId);
         return result;
     }
 

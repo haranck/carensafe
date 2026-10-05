@@ -196,14 +196,14 @@ export const useClearCart = () => {
     });
 };
 
-// Wishlist "Move to Cart": { productId, variantId }
+// Wishlist "Move to Cart": { itemId (wishlist item), productId, variantId }
 export const useMoveToCart = () => {
     const setCount = useSetCount();
     const invalidateAll = useInvalidate([...CART_PREFIXES, ...WISHLIST_PREFIXES]);
     return useMutation({
         mutationFn: moveWishlistItemToCart,
         onSuccess: (response) => setCount(response.data.count),
-        onError: (error, { productId }) => toast.error(errorMessage(error), { id: `cart-error-${productId}` }),
+        onError: (error, { variantId }) => toast.error(errorMessage(error), { id: `cart-error-${variantId}` }),
         onSettled: invalidateAll,
     });
 };
@@ -216,7 +216,7 @@ const showAddedToast = (message) =>
 
 /**
  * Single entry point for cart actions (product cards, product detail page, sticky bar, wishlist page).
- * item: { productId, variantId, quantity }. Every action needs an account: guests go through the login gate
+ * item: { productId, variantId, quantity } (+ wishlistItemId for Move to Cart). Every action needs an account: guests go through the login gate
  * (toast + login, then back to this page) and get `null`. Failures are toasted by the mutation hooks.
  */
 export const useCartActions = () => {
@@ -251,7 +251,7 @@ export const useCartActions = () => {
 
     const moveToCart = (item) => {
         if (!requireAuth("Log in to add items to your cart")) return Promise.resolve(null);
-        return move({ productId: item.productId, variantId: item.variantId })
+        return move({ itemId: item.wishlistItemId, productId: item.productId, variantId: item.variantId })
             .then((response) => {
                 showAddedToast("Moved to cart");
                 return response;

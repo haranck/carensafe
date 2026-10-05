@@ -1,7 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { ChevronDown, Loader2 } from "lucide-react";
@@ -13,15 +11,19 @@ import AddressStep from "../../components/Checkout/AddressStep";
 import PaymentStep from "../../components/Checkout/PaymentStep";
 import CheckoutSummary from "../../components/Checkout/CheckoutSummary";
 import MobilePlaceOrderBar from "../../components/Checkout/MobilePlaceOrderBar";
+import VerifyingOverlay from "../../components/Payment/VerifyingOverlay";
 import { useGetCart } from "../../hooks/Cart/CartHooks";
 import { useGetAddresses } from "../../hooks/Address/AddressHooks";
-import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
+import { usePlaceOrder } from "../../hooks/Order/OrderHooks";
+import { useWallet } from "../../hooks/Wallet/WalletHooks";
+import { usePaymentFlow } from "../../hooks/Payment/usePaymentFlow";
+import { FRONTEND_ROUTES, orderDetailPath, orderSuccessPath } from "../../constants/frontendRoutes";
 import { CONTAINER, FOCUS_RING, PAGE_BACKGROUND } from "../../constants/customerTheme";
-import { PAYMENT_DEFAULTS, checkoutTotals, demoOrderNumber, paymentLabel, paymentSchema } from "../../utils/checkout";
-import { formatAddress } from "../../utils/address";
-import { formatPrice, productTitle } from "../../utils/product";
-
-const DEMO_PROCESSING_MS = 1500;
+import { checkoutTotals, newCheckoutKey, paymentSplit } from "../../utils/checkout";
+import { formatPaise } from "../../utils/wallet";
+import { formatPrice } from "../../utils/product";
+import { getErrorMessage } from "../../utils/errorMessage";
+import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 // Nothing to order (empty cart, or only unavailable lines): back to the cart with a toast (in an effect, not render)
 const EmptyCartRedirect = () => {
@@ -37,69 +39,90 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const cartQuery = useGetCart();
   const addressesQuery = useGetAddresses();
+  const { data: walletData } = useWallet();
+  const placeOrderMutation = usePlaceOrder();
+  const { pay, isBusy: isPaying, isVerifying } = usePaymentFlow();
   const [chosenAddressId, setChosenAddressId] = useState(null);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const [isPlacing, setIsPlacing] = useState(false);
-  const timerRef = useRef(null);
-
-  // Payment fields (demo). Hidden methods' fields are dropped (shouldUnregister), so card details don't linger.
-  const paymentForm = useForm({
-    resolver: zodResolver(paymentSchema),
-    mode: "onTouched",
-    defaultValues: PAYMENT_DEFAULTS,
-    shouldUnregister: true,
-  });
-  const { isValid: isPaymentValid } = paymentForm.formState;
-  const selectedMethod = useWatch({ control: paymentForm.control, name: "method" });
+  const [paymentMethod, setPaymentMethod] = useState("razorpay");
+  const [useWalletBalance, setUseWalletBalance] = useState(false);
+  const isPlacing = placeOrderMutation.isPending;
+  const isBusy = isPlacing || isPaying;
 
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = "Checkout | Care N Safe";
-    return () => {
-      document.title = previousTitle;
-      clearTimeout(timerRef.current);
-    };
-  }, []);
+  usePageTitle("Checkout");
 
   const items = (cartQuery.data?.data?.items || []).filter((item) => item.isAvailable);
   const totals = checkoutTotals(cartQuery.data?.data?.summary);
   const addresses = addressesQuery.data?.data || [];
   // The user's pick while it still exists, else the default (the list has the default first)
   const selectedAddress = addresses.find((address) => address._id === chosenAddressId) || addresses[0] || null;
+  const balancePaise = walletData?.data?.balance || 0;
+  const testMode = walletData?.data?.paymentMode === "test";
+  const totalPaise = Math.round(totals.total * 100);
+  const wantsWallet = paymentMethod === "razorpay" && useWalletBalance;
+  const split = paymentSplit({ totalRupees: totals.total, method: paymentMethod, useWallet: wantsWallet, balancePaise });
+
+  // One idempotency key per checkout attempt: kept through retries / double clicks, new when the cart, address or
+  // payment choice changes (state adjusted during render) or after a failed attempt
+  const signature = `${items.map((item) => `${item.variantId}x${item.quantity}`).join(",")}|${selectedAddress?._id}|${paymentMethod}|${wantsWallet}`;
+  const [attempt, setAttempt] = useState({ key: "", signature: "" });
+  if (attempt.signature !== signature && !isBusy) setAttempt({ key: newCheckoutKey(), signature });
 
   let blockedReason = "";
   if (!selectedAddress) blockedReason = "Add a delivery address to continue.";
-  else if (!selectedMethod) blockedReason = "Choose a payment method.";
-  else if (!isPaymentValid) blockedReason = "Complete your payment details.";
+  else if (!paymentMethod) blockedReason = "Choose a payment method.";
+  else if (paymentMethod === "wallet" && balancePaise < totalPaise) blockedReason = "Not enough wallet balance. Choose another method.";
   const canPlaceOrder = !blockedReason;
 
-  // DEMO: no order is created and the cart is NOT cleared. Orders (API + payment gateway) come later; until then this
-  // only waits a moment and shows the success page. Card / UPI details are never sent, logged or passed on.
-  const submitOrder = ({ method }) => {
-    if (!selectedAddress || isPlacing) return;
-    setIsPlacing(true);
-    const order = {
-      orderNumber: demoOrderNumber(),
-      items: items.map((item) => ({
-        itemId: item.itemId,
-        name: productTitle(item.name, item.variantName),
-        quantity: item.quantity,
-        lineTotal: item.lineTotal,
-      })),
-      totals,
-      address: { fullName: selectedAddress.fullName, phone: selectedAddress.phone, text: formatAddress(selectedAddress) },
-      paymentMethod: paymentLabel(method),
-    };
-    timerRef.current = setTimeout(() => navigate(FRONTEND_ROUTES.ORDER_SUCCESS, { replace: true, state: { order } }), DEMO_PROCESSING_MS);
-  };
-  // Re-validates the payment fields first (shows their errors if something slipped through)
-  const placeOrder = () => paymentForm.handleSubmit(submitOrder)();
+  let buttonLabel = "Place Order";
+  if (split.method === "wallet") buttonLabel = `Pay ${formatPaise(split.walletPaise)} from wallet`;
+  else if (split.method === "razorpay") buttonLabel = `Pay ${formatPaise(split.onlinePaise)}`;
+  let busyLabel = "Placing order…";
+  if (isVerifying) busyLabel = "Confirming payment…";
+  else if (isPaying) busyLabel = "Waiting for payment…";
 
-  if (cartQuery.isSuccess && items.length === 0 && !isPlacing) return <EmptyCartRedirect />;
+  /**
+   * The server recomputes prices and stock, reserves the stock and creates the order (COD / wallet: final; online:
+   * waiting for payment). Online → the Razorpay popup; closing it leaves the order payable from its page.
+   */
+  const placeOrder = () => {
+    if (!canPlaceOrder || isBusy) return;
+    placeOrderMutation.mutate(
+      { addressId: selectedAddress._id, paymentMethod, useWallet: wantsWallet, idempotencyKey: attempt.key },
+      {
+        onSuccess: (response) => {
+          const result = response.data;
+          if (!result.paymentRequired) {
+            navigate(orderSuccessPath(result.orderId), { replace: true });
+            return;
+          }
+          pay({
+            checkout: result.razorpay,
+            orderId: result.orderId,
+            onSuccess: () => navigate(orderSuccessPath(result.orderId), { replace: true }),
+            onDismiss: () => navigate(orderDetailPath(result.orderId), { replace: true }),
+            onUnconfirmed: () => {
+              toast("We're confirming your payment — you'll see it in My Orders.", { id: "payment-confirming" });
+              navigate(orderDetailPath(result.orderId), { replace: true });
+            },
+          });
+        },
+        onError: (error) => {
+          toast.error(getErrorMessage(error, "Couldn't place your order. Please try again."), { id: "place-order-error" });
+          setAttempt({ key: newCheckoutKey(), signature });
+          // Stock or prices may have changed: show the cart as it is now
+          cartQuery.refetch();
+        },
+      }
+    );
+  };
+
+  // While placing / paying / after success the cart must not bounce the user back to the cart page
+  if (cartQuery.isSuccess && items.length === 0 && !isBusy && !placeOrderMutation.isSuccess) return <EmptyCartRedirect />;
 
   let content;
   if (cartQuery.isLoading) {
@@ -131,17 +154,28 @@ const CheckoutPage = () => {
             <CheckoutSummary
               items={items}
               totals={totals}
+              split={split}
               canPlaceOrder={canPlaceOrder}
-              isPlacing={isPlacing}
+              isPlacing={isBusy}
               onPlaceOrder={placeOrder}
               blockedReason={blockedReason}
+              buttonLabel={buttonLabel}
+              busyLabel={busyLabel}
             />
           </div>
         </div>
 
         <div className="flex min-w-0 flex-col gap-5 lg:order-1">
           <AddressStep addressesQuery={addressesQuery} selectedId={selectedAddress?._id} onSelect={setChosenAddressId} />
-          <PaymentStep form={paymentForm} />
+          <PaymentStep
+            method={paymentMethod}
+            onChange={setPaymentMethod}
+            useWallet={useWalletBalance}
+            onUseWalletChange={setUseWalletBalance}
+            balancePaise={balancePaise}
+            totalPaise={totalPaise}
+            testMode={testMode}
+          />
         </div>
       </div>
     );
@@ -177,18 +211,23 @@ const CheckoutPage = () => {
           {showBar && (
             <MobilePlaceOrderBar
               total={totals.total}
+              {...(split.walletPaise > 0 && split.onlinePaise > 0 && { amountLabel: "Pay online", amount: formatPaise(split.onlinePaise) })}
               blockedReason={blockedReason}
               canPlaceOrder={canPlaceOrder}
-              isPlacing={isPlacing}
+              isPlacing={isBusy}
               onPlaceOrder={placeOrder}
+              buttonLabel={buttonLabel}
+              busyLabel={busyLabel}
             />
           )}
         </MotionConfig>
       </LazyMotion>
 
+      <VerifyingOverlay show={isVerifying} />
+
       <Footer />
-      {/* Keeps the end of the footer reachable above the mobile bar */}
-      {showBar && <div aria-hidden="true" className="h-24 bg-[#2c265a] lg:hidden" />}
+      {/* Keeps the page end reachable above the mobile bar (footer-coloured where the footer shows, tablets) */}
+      {showBar && <div aria-hidden="true" className="h-24 md:bg-[#2c265a] lg:hidden" />}
     </div>
   );
 };

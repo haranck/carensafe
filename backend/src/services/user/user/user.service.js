@@ -1,6 +1,7 @@
 const userRepository = require('../../../repositories/user/user.repository');
 const otpUtil = require('../../../utils/otp');
 const redisUtil = require('../../../utils/redis');
+const passwordUtil = require('../../../utils/password');
 const cloudinaryUtil = require('../../../utils/cloudinary');
 const emailService = require('../auth/email.service');
 
@@ -86,10 +87,14 @@ class UserService {
         return toProfile(user);
     }
 
-    async requestEmailChange(userId, newEmail) {
+    // Needs the current password first (400, not 401: a wrong password isn't an expired session)
+    async requestEmailChange(userId, newEmail, password) {
         const user = await this.getUser(userId);
         if (!user.password) {
             throw httpError('Your email is managed by your Google account.', 403);
+        }
+        if (!(await passwordUtil.compare(password, user.password))) {
+            throw httpError('Incorrect password.', 400);
         }
 
         const normalizedEmail = newEmail.trim().toLowerCase();
