@@ -7,7 +7,6 @@ import AdminRoute from "../AdminRoute";
 import AdminUsersPage from "../../pages/Admin/Users/AdminUsersPage";
 import AdminProductsPage from "../../pages/Admin/Products/AdminProductsPage";
 import AdminAddProductPage from "../../pages/Admin/Products/AdminAddProductPage";
-import AdminEarningsPage from "../../pages/Admin/Earnings/AdminEarningsPage";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 
 const AdminDashboardPage = lazy(() => import("../../pages/Admin/Dashboard/AdminDashboardPage"));
@@ -47,7 +46,6 @@ const AdminRoutes = () => {
           <Route path={toRelative(FRONTEND_ROUTES.ADMIN_ORDER_DETAIL)} element={withLoader(<AdminOrderDetailPage />)} />
           <Route path={toRelative(FRONTEND_ROUTES.ADMIN_RETURNS)} element={withLoader(<AdminReturnsPage />)} />
           <Route path={toRelative(FRONTEND_ROUTES.ADMIN_SALES_REPORTS)} element={withLoader(<AdminSalesReportsPage />)} />
-          <Route path={toRelative(FRONTEND_ROUTES.ADMIN_EARNINGS)} element={<AdminEarningsPage />} />
         </Route>
       </Route>
     </Routes>

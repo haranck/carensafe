@@ -36,7 +36,6 @@ export const FRONTEND_ROUTES = {
   ADMIN_ORDER_DETAIL: "/admin/orders/:id", // build links with adminOrderDetailPath()
   ADMIN_RETURNS: "/admin/returns",
   ADMIN_SALES_REPORTS: "/admin/sales-reports",
-  ADMIN_EARNINGS: "/admin/earnings",
 };
 
 // "/shop" or "/shop?combo=true" etc. (the shop keeps its filters in the URL)
