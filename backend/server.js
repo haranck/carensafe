@@ -24,7 +24,12 @@ async function startServer() {
 
         startPaymentJobs();
 
-        server = app.listen(PORT, () => {
+        // Express 5 passes listen errors (e.g. EADDRINUSE) to this callback instead of throwing
+        server = app.listen(PORT, (error) => {
+            if (error) {
+                console.error(`Failed to start CareNSafe server on port ${PORT}:`, error.message);
+                process.exit(1);
+            }
             console.log(`CareNSafe server running on port ${PORT}`);
         });
     } catch (error) {

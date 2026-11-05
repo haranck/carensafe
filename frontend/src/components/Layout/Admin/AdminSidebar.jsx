@@ -11,7 +11,6 @@ const NAV_ITEMS = [
   { label: "Orders", icon: ShoppingBag, path: FRONTEND_ROUTES.ADMIN_ORDERS, badge: "pendingReturns" },
   { label: "Returns", icon: RotateCcw, path: FRONTEND_ROUTES.ADMIN_RETURNS },
   { label: "Sales Reports", icon: BarChart2, path: FRONTEND_ROUTES.ADMIN_SALES_REPORTS },
-  { label: "Earnings", icon: Wallet, path: FRONTEND_ROUTES.ADMIN_EARNINGS },
 ];
 
 const AdminSidebar = ({ isSidebarOpen }) => {
