@@ -8,7 +8,13 @@ const { globalErrorHandler } = require('./middlewares/error.middleware');
 const app = express();
 
 const corsOptions = {
-    origin: [env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:5174'],
+    origin: [
+        env.FRONTEND_URL,
+        'https://carensafeclub.shop',
+        'https://www.carensafeclub.shop',
+        'http://localhost:5173',
+        'http://localhost:5174'
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']

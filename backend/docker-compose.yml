@@ -1,7 +1,6 @@
-
 services:
   backend:
-    image: haranck/carensafe-backend:latest
+    image:carensafe/carensafe-backend:latest
     build:
       context: .
       dockerfile: Dockerfile
