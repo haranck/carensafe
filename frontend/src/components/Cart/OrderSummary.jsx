@@ -41,7 +41,7 @@ const OrderSummary = ({ summary, canCheckout, onCheckout, isUpdating = false }) 
               − {formatPrice(summary.savings)}
             </Row>
           )}
-          <Row label="Shipping" valueClassName={isFreeShipping ? "text-emerald-600" : "text-[#1e1a3a]"}>
+          <Row label="Delivery charge" valueClassName={isFreeShipping ? "text-emerald-600" : "text-[#1e1a3a]"}>
             {isFreeShipping ? "FREE" : formatPrice(summary.shipping)}
           </Row>
         </dl>

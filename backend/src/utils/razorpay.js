@@ -22,10 +22,13 @@ const call = async (label, fn) => {
     }
 };
 
-// Constant-time comparison of two hex HMACs (lengths first: timingSafeEqual throws on different lengths)
+// Constant-time comparison of two hex HMACs (trimmed & lowercase, lengths checked first)
 const safeEqualHex = (expected, received) => {
-    if (typeof received !== 'string' || received.length !== expected.length) return false;
-    return crypto.timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(received, 'utf8'));
+    if (typeof received !== 'string' || typeof expected !== 'string') return false;
+    const cleanExpected = expected.trim().toLowerCase();
+    const cleanReceived = received.trim().toLowerCase();
+    if (cleanReceived.length !== cleanExpected.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(cleanExpected, 'utf8'), Buffer.from(cleanReceived, 'utf8'));
 };
 
 const hmac = (secret, payload) => crypto.createHmac('sha256', secret).update(payload).digest('hex');

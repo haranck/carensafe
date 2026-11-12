@@ -35,9 +35,11 @@ const refreshOnce = (kind, run) => {
   return refreshing[kind];
 };
 
+const apiBase = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
 const refreshUser = () =>
   refreshOnce("user", async () => {
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/user/auth/refresh`, {}, { withCredentials: true });
+    const response = await axios.post(`${apiBase}${API_ROUTES.AUTH.REFRESH}`, {}, { withCredentials: true });
     const accessToken = response.data?.data?.accessToken || response.data?.accessToken;
     store.dispatch(setAccessToken(accessToken));
     return accessToken;
@@ -45,7 +47,7 @@ const refreshUser = () =>
 
 const refreshAdmin = () =>
   refreshOnce("admin", async () => {
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}${API_ROUTES.ADMIN_AUTH.REFRESH}`, {}, { withCredentials: true });
+    const response = await axios.post(`${apiBase}${API_ROUTES.ADMIN_AUTH.REFRESH}`, {}, { withCredentials: true });
     store.dispatch(setAdminSession(response.data.data));
     return response.data.data.accessToken;
   });
@@ -57,8 +59,20 @@ const endAdminSession = () => {
   }
 };
 
-// Skip token refresh for auth endpoints (login, signup, OTPs, google, forgot / reset password, admin auth)
-const authPaths = ["/login", "/signup", "/verify-otp", "/resend-otp", "/google", "/forgot-password", "/verify-reset-otp", "/reset-password", "/admin/auth/"];
+// Skip token refresh for auth endpoints (login, signup, OTPs, google, forgot / reset password, refresh, logout, admin auth)
+const authPaths = [
+  "/login",
+  "/signup",
+  "/verify-otp",
+  "/resend-otp",
+  "/google",
+  "/forgot-password",
+  "/verify-reset-otp",
+  "/reset-password",
+  "/refresh",
+  "/logout",
+  "/admin/auth/"
+];
 
 AxiosInstance.interceptors.response.use(
   (response) => response,

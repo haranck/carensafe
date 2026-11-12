@@ -6,7 +6,16 @@ export const checkoutTotals = (summary) => {
   const subtotal = summary?.subtotal || 0;
   const discount = 0;
   const shipping = summary?.shipping || 0;
-  return { itemCount: summary?.itemCount || 0, subtotal, discount, shipping, total: Math.max(0, subtotal - discount + shipping) };
+  return {
+    itemCount: summary?.itemCount || 0,
+    subtotal,
+    discount,
+    shipping,
+    shippingFee: summary?.shippingFee || 0,
+    freeShippingThreshold: summary?.freeShippingThreshold || 0,
+    amountForFreeShipping: summary?.amountForFreeShipping || 0,
+    total: Math.max(0, subtotal - discount + shipping)
+  };
 };
 
 // Payment options at checkout (ids match the API's paymentMethod)

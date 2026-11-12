@@ -7,6 +7,8 @@ const { globalErrorHandler } = require('./middlewares/error.middleware');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 const corsOptions = {
     origin: [
         env.FRONTEND_URL,
@@ -17,7 +19,7 @@ const corsOptions = {
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With']
 };
 
 app.use(cors(corsOptions));

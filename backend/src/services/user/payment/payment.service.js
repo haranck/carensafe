@@ -664,14 +664,24 @@ class PaymentService {
         if (await webhookEventRepository.exists(eventId)) return { duplicate: true };
         console.log('[Webhook]', event, eventId);
 
-        if (['payment.captured', 'payment.authorized', 'order.paid'].includes(event) && paymentEntity) {
-            const payment = await paymentRepository.findByRazorpayOrderId(paymentEntity.order_id);
+        if (['payment.captured', 'payment.authorized', 'order.paid'].includes(event)) {
+            const razorpayOrderId = paymentEntity?.order_id || body.payload?.order?.entity?.id;
+            const payment = razorpayOrderId ? await paymentRepository.findByRazorpayOrderId(razorpayOrderId) : null;
             if (!payment) {
                 await this.markEventProcessed(eventId, event);
                 return { ignored: true };
             }
+            let currentPaymentEntity = paymentEntity;
+            if (!currentPaymentEntity && razorpayOrderId) {
+                const attempts = await razorpayUtil.fetchOrderPayments(razorpayOrderId);
+                currentPaymentEntity = paidAttempt(attempts, payment);
+            }
+            if (!currentPaymentEntity) {
+                await this.markEventProcessed(eventId, event);
+                return { ignored: true };
+            }
             try {
-                await this.settle(payment, paymentEntity, { eventId, eventName: event });
+                await this.settle(payment, currentPaymentEntity, { eventId, eventName: event });
             } catch (error) {
                 if (error.statusCode === 502) throw error;
                 await this.markEventProcessed(eventId, event);

@@ -1,6 +1,6 @@
 // Shipping rules, in one place (cart summary now, checkout next).
-// SHIPPING_FEE 0 = free delivery on every order; set a fee to charge it below FREE_SHIPPING_THRESHOLD.
+// Below FREE_SHIPPING_THRESHOLD (399), charge SHIPPING_FEE (40). Free delivery at or above threshold.
 module.exports = {
     FREE_SHIPPING_THRESHOLD: 399,
-    SHIPPING_FEE: 0
+    SHIPPING_FEE: 40
 };

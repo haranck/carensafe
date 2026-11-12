@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Leaf, Loader2, Lock, RotateCcw, ShieldCheck, Tag } from "lucide-react";
+import { Leaf, Loader2, Lock, RotateCcw, ShieldCheck, Tag, Truck } from "lucide-react";
 import { FRONTEND_ROUTES } from "../../constants/frontendRoutes";
 import { BRAND_GRADIENT, FOCUS_RING } from "../../constants/customerTheme";
 import { formatPrice, productTitle } from "../../utils/product";
@@ -83,6 +83,22 @@ const CheckoutSummary = ({ items, totals, split, canPlaceOrder, isPlacing, onPla
         ))}
       </ul>
 
+      {totals.amountForFreeShipping > 0 ? (
+        <p className="mt-4 flex items-start gap-2 rounded-xl border border-pink-100 bg-[#fff5fa] px-3.5 py-3 text-[12.5px] font-medium leading-relaxed text-[#1e1a3a]">
+          <Truck size={17} aria-hidden="true" className="mt-0.5 flex-shrink-0 text-[#d6008a]" />
+          <span>
+            Delivery is <strong>{formatPrice(totals.shippingFee)}</strong> on orders below{" "}
+            <strong>{formatPrice(totals.freeShippingThreshold)}</strong>. Add{" "}
+            <strong className="text-[#d6008a]">{formatPrice(totals.amountForFreeShipping)}</strong> more for free delivery.
+          </span>
+        </p>
+      ) : (
+        <p className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3.5 py-3 text-[12.5px] font-semibold text-emerald-700">
+          <Truck size={17} aria-hidden="true" className="flex-shrink-0" />
+          You&apos;ve unlocked free delivery.
+        </p>
+      )}
+
       <form onSubmit={handleCoupon} className="mt-5 border-t border-slate-100 pt-4">
         <label htmlFor={couponId} className="text-[12px] font-bold uppercase tracking-wide text-slate-500">
           Coupon code
@@ -110,7 +126,7 @@ const CheckoutSummary = ({ items, totals, split, canPlaceOrder, isPlacing, onPla
         <Row label="Discount" valueClassName={totals.discount > 0 ? "text-emerald-600" : "text-[#1e1a3a]"}>
           {totals.discount > 0 ? `− ${formatPrice(totals.discount)}` : formatPrice(0)}
         </Row>
-        <Row label="Shipping" valueClassName={totals.shipping === 0 ? "text-emerald-600" : "text-[#1e1a3a]"}>
+        <Row label="Delivery charge" valueClassName={totals.shipping === 0 ? "text-emerald-600" : "text-[#1e1a3a]"}>
           {totals.shipping === 0 ? "FREE" : formatPrice(totals.shipping)}
         </Row>
       </dl>
