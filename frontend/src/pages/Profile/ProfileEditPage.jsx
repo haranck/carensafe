@@ -1,20 +1,16 @@
-import { useState } from "react";
 import { Mail, ShieldCheck } from "lucide-react";
 import ProfileHeading from "../../components/Profile/ProfileHeading";
 import Panel from "../../components/Profile/Panel";
 import PanelSkeleton from "../../components/Profile/PanelSkeleton";
 import AvatarUploader from "../../components/Profile/AvatarUploader";
 import ProfileForm from "../../components/Profile/ProfileForm";
-import ChangeEmailModal from "../../components/Profile/ChangeEmailModal";
 import SectionError from "../../components/Home/SectionError";
 import { useGetProfile } from "../../hooks/Profile/ProfileHooks";
-import { FOCUS_RING } from "../../constants/customerTheme";
 import { usePageTitle } from "../../hooks/common/usePageTitle";
 
 const ProfileEditPage = () => {
   usePageTitle("Edit Profile");
   const { data, isLoading, isError, isFetching, refetch } = useGetProfile();
-  const [isEmailOpen, setIsEmailOpen] = useState(false);
   const profile = data?.data;
 
   let content;
@@ -44,25 +40,20 @@ const ProfileEditPage = () => {
               <Mail size={17} aria-hidden="true" className="flex-shrink-0 text-[#d6008a]" />
               <span className="truncate">{profile.email}</span>
             </p>
-            {profile.canChangeEmail && (
-              <button
-                type="button"
-                onClick={() => setIsEmailOpen(true)}
-                className={`inline-flex h-10 items-center rounded-full border border-pink-200 px-5 text-[13px] font-bold text-[#d6008a] hover:bg-[#fff5fa] hover:text-[#9d0063] transition-colors ${FOCUS_RING}`}
-              >
-                Change
-              </button>
-            )}
+            <button
+              type="button"
+              disabled
+              title="Email changes aren't available from your profile."
+              className="inline-flex h-10 cursor-not-allowed items-center rounded-full border border-slate-200 px-5 text-[13px] font-bold text-slate-400"
+            >
+              Change
+            </button>
           </div>
-          {!profile.canChangeEmail && (
-            <p className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 px-4 py-2.5 text-[12.5px] text-slate-500">
-              <ShieldCheck size={15} aria-hidden="true" className="mt-px flex-shrink-0" />
-              You sign in with Google, so your email is managed by your Google account.
-            </p>
-          )}
+          <p className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 px-4 py-2.5 text-[12.5px] text-slate-500">
+            <ShieldCheck size={15} aria-hidden="true" className="mt-px flex-shrink-0" />
+            Email changes aren't available from your profile.
+          </p>
         </Panel>
-
-        <ChangeEmailModal open={isEmailOpen} currentEmail={profile.email} onClose={() => setIsEmailOpen(false)} />
       </div>
     );
   }
