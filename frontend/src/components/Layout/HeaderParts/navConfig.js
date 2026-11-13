@@ -18,7 +18,7 @@ export const TRUST_POINTS = [
 export const NAV_LINKS = [
   { label: "Home", to: FRONTEND_ROUTES.LANDING, authTo: FRONTEND_ROUTES.HOME },
   { label: "Shop", to: FRONTEND_ROUTES.SHOP },
-  { label: "Care Shorts", to: FRONTEND_ROUTES.CARE_SHORTS },
+  // { label: "Care Shorts", to: FRONTEND_ROUTES.CARE_SHORTS },
   { label: "About Us", to: FRONTEND_ROUTES.ABOUT },
   { label: "Contact", to: FRONTEND_ROUTES.CONTACT },
 ];
